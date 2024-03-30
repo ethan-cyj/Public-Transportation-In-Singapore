@@ -31,4 +31,5 @@ dmypy.json
 
 #/data
 /Backend/otp
+/Backend/OTP
 .DS_Store
