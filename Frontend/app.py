@@ -1,104 +1,97 @@
-from shiny import App, render, ui
-from sklearn.cluster import KMeans
+from shiny import App, render, ui,Inputs,Outputs,Session
+from shinywidgets import output_widget, render_widget
 import numpy as np
 import pandas as pd
-import os
-from selenium import webdriver
-from shinywidgets import output_widget, render_widget
 import plotly.express as px
 import plotly.graph_objs as go
-import requests
+import os
+import geopandas as gpd
+import helper_functions as helper
+from shapely import Point 
+import json 
 
-current_directory = os.getcwd()
-files_in_directory = os.listdir(current_directory)
-data_directory = os.path.join(current_directory, 'data')
-file_path1 = os.path.join(data_directory, 'mrt_station_final.csv')
-file_path2 = os.path.join(data_directory, 'mrt_station_colours.csv')
-mrt_df = pd.read_csv(file_path1)
-mrt_color = pd.read_csv(file_path2)
-mrt_names = mrt_df['MRT.Name'].values.tolist()
-coords = mrt_df[['Latitude', 'Longitude']].values.tolist()
+
+
+# path_metrics = pd.read_csv(os.path.join(data_directory, 'path_metrics.csv'))
+
+# path_metrics = path_metrics.astype(str)
+
 
 app_ui = ui.page_fluid(
-    ui.h2("Transport Medium"),
-    ui.input_select("transport_means", "Select the means of movement", ["TRANSIT","Bus","Cycling","MRT+Bus","Bus+Cycling","MRT+Cycling"]),
-    ui.input_selectize("station", "Select the MRT station", mrt_names,multiple=True),
-    ui.input_slider("n_min", "Select Maximum Time (in minutes)", 0, 60, 5),
-    ui.output_text_verbatim("txt"),
-    output_widget("plot")
+    ui.page_navbar(title = "DSE3101 Cycle",
+                   bg= "#32de84"),
+    ui.h2("Rankings by Planning Area"),
+    ui.input_select("metrics", "Select metric for comparison", choices=["suitability", "time savings", "weighted score"],selected = "suitability"),
+    ui.layout_columns(
+    ui.card(output_widget("chloropeth_map")),
+    ui.card(),
+    col_widths = (8,4)
+    )   
+    # ui.layout_columns(
+    #     output_widget("chloropeth_map"),
+    #     output_widget("mrt_table"),
+    #     height ="300px")
 )
 
 def server(input, output, session):
-    def fetch_isochrone(lat, lon, modes, cutoff):
-        """Fetch isochrone GeoJSON for a given location."""
-        url = "http://localhost:8080/otp/traveltime/isochrone"
-        params = {
-            "batch": "true",
-            "location": f"{lat},{lon}",
-            "time": "2023-06-01T18:00:00+02:00",
-            "modes": modes,
-            "arriveBy": "false",
-            "cutoff": cutoff
-        }
-        response = requests.get(url, params=params)
-        if response.status_code == 200:
-            return response.json()
-        else:
-            print(f"Failed to fetch isochrone for {lat},{lon}. Status code: {response.status_code}")
-            return None
-    @render.text
-    def txt():
-        return f"You are trying to find the maximum distance that can be travelled by {input.transport_means()}\nfrom {input.station()}\nwithin {input.n_min()} minutes"
+
+    current_directory = os.getcwd()
+    data_directory = os.path.join(current_directory, 'data')
+
+    basemap = gpd.read_file(os.path.join(data_directory, 'MasterPlan2019PlanningAreaBoundaryNoSea.geojson'))
+    basemap['Planning_Area'] = basemap["Description"].apply(lambda x: helper.extract_td_contents(x)[0])
+    basemap['geometry'] = basemap['geometry'].to_crs("4326")
+
+    mrt_stations_df = pd.read_csv(os.path.join(data_directory, 'mrt_station_final.csv'),usecols = [1,2,3])
+    mrt_stations_df.sort_values(by='MRT.Name', inplace=True)
+    ranking = pd.read_csv(os.path.join(data_directory, 'mrt_ranking.csv'))
+
+    mrt_stations_df_combined = pd.merge(mrt_stations_df, ranking, left_on='MRT.Name', right_on='MRT.Name', how='left')
+    for index, row in mrt_stations_df_combined.iterrows():
+        point_coordinate = Point(row['Longitude'], row['Latitude'])
+        Planning_Area = basemap[basemap.geometry.contains(point_coordinate)]['Planning_Area'].reset_index(drop=True)
+        mrt_stations_df_combined.loc[index, 'Planning_Area'] = Planning_Area.values[0]
+
+    mrt_stations_df_combined = mrt_stations_df_combined.rename(columns = {'MRT.Name':'MRT Name',
+                                                                        'time_difference':'time savings',
+                                                                        'Weighted_Score':'weighted score'})
     
+    path_metrics = pd.read_csv(os.path.join(data_directory, 'path_metrics.csv'))
+    path_metrics = path_metrics.astype(str)
+
+    @output 
     @render_widget
-    def plot():
-        fig1 = go.Figure()
-        minutes = '%02d' % (input.n_min())
-        cutoff = minutes+"M00S"
-        modes = input.transport_means()
-        for mrt_name in input.station():
-            lat = mrt_df[(mrt_df['MRT.Name'] == mrt_name)]['Latitude'].iloc[0]
-            lon = mrt_df[(mrt_df['MRT.Name'] == mrt_name)]['Longitude'].iloc[0]
-            color = mrt_color[mrt_color['MRT.Name'] == mrt_name]['Color'].iloc[0]
-            station_isochrone = fetch_isochrone(lat,lon,modes,cutoff)
-            if station_isochrone and 'features' in station_isochrone:
-                # Access the first feature in the returned GeoJSON
-                feature = station_isochrone['features'][0]
-                if 'geometry' in feature:
-                    geometry = feature['geometry']
-                    if 'coordinates' in geometry:
-                        coordinates = geometry['coordinates'][0][0]
-                        # Assuming coordinates are in [lon, lat] format
-                        lon_coords = [coord[0] for coord in coordinates]
-                        lat_coords = [coord[1] for coord in coordinates]
-                        fig1.add_trace(go.Scattermapbox(
-                            mode="lines",
-                            lon=lon_coords,
-                            lat=lat_coords,
-                            name=f"Isochrone {lat}, {lon}",
-                            line=dict(width=1, color=color),
-                            fill = "toself",
-                            marker=dict(size=0),
-                            text=[mrt_name],  # Set text for hover
-                            hoverinfo='text'
-                        ))
-                        fig1.add_trace(go.Scattermapbox(
-                            mode="markers",
-                            lon=[lon],
-                            lat=[lat],
-                            text=[mrt_name],
-                            name=mrt_name,
-                            marker=dict(size=10,color=color),
-                            textposition="bottom center",
-                        ))
-        # Define layout for the map
-        fig1.update_layout(
-            mapbox_style="carto-positron",
-            mapbox_zoom=12,
-            mapbox_center={"lat": coords[0][0], "lon": coords[0][1]},
-            showlegend = False
+    def chloropeth_map():
+        df = mrt_stations_df_combined.groupby('Planning_Area').agg({input.metrics():'mean'}).reset_index()
+        basemap_modified = pd.merge(basemap, df, left_on='Planning_Area', right_on='Planning_Area', how='left')
+        fig = go.Figure()
+        fig.add_trace(go.Choroplethmapbox(geojson=json.loads(basemap_modified.geometry.to_json()), 
+                                   locations=basemap_modified.index,
+                                   z=basemap_modified[input.metrics()],
+                                   colorscale='RdYlGn',
+                                   hoverinfo = 'text',
+                                   text = ("Planning Area: " + basemap_modified['Planning_Area'] + '<br>' + 
+                                           "Average " + input.metrics() + " of paths within the area: " + basemap_modified[input.metrics()].astype(str) )))
+        fig.update_layout(
+            margin={'l':0,'t':0,'b':0,'r':0},
+            mapbox={
+                'style': "open-street-map",
+                'center': {'lat': 1.36, 'lon': 103.85},
+                'zoom': 10
+            }
         )
-        return fig1.show()
-            
+        return fig
+    
+    @output
+    @render.data_frame
+    def path_metric():
+        return render.DataTable(path_metrics,width = "50%",height = "300px")
 
 app = App(app_ui, server)
+
+if __name__ == "__main__":
+    app.run()
+
+
+
+
