@@ -11,11 +11,11 @@ fiona.drvsupport.supported_drivers['KML'] = 'rw'
 
 def city_centers(subZoneScore):
     result = {}
-    for index, row in df.iterrows():
-        name = subZoneScore['SUBZONE_N']
-        center = subZoneScore['geometry'].centroid
+    for index, row in subZoneScore.iterrows():
+        name = row['SUBZONE_N']
+        center = row['geometry'].centroid
         lat,lon = center.xy
-        result[name] = {'lon':lon, 'lat':lat}
+        result[name] = {'lon':lon, 'lat':lat[0]}
     return result
 
 
