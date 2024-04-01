@@ -104,6 +104,7 @@ def createMap(subZoneScore, parkConnector_lats, parkConnector_lons, bicycleParki
                     size=3,
                     opacity=0.7
                 ),
+                name = 'Park Connector',
                 legendgroup = 'Lines'
             ),                
             go.Scattermapbox(
@@ -115,6 +116,7 @@ def createMap(subZoneScore, parkConnector_lats, parkConnector_lons, bicycleParki
                     opacity=0.7
                 )
                 ,text= bicycleParking["Description"]+ "</br>" + "Number of Racks: " + bicycleParking["RackCount"],
+                name = 'Bicycle Parking',
                 legendgroup = 'Lines'
             ),
             go.Scattermapbox(
@@ -125,6 +127,7 @@ def createMap(subZoneScore, parkConnector_lats, parkConnector_lons, bicycleParki
                     size=3,
                     opacity=0.7
                 ),
+                name = 'Cycling Paths',
                 legendgroup = 'Lines'
             ), 
             go.Scattermapbox(
@@ -136,6 +139,7 @@ def createMap(subZoneScore, parkConnector_lats, parkConnector_lons, bicycleParki
                     opacity=0.7
                 )
                 ,text= hazards["Name"]+ "</br>",
+                name = 'Hazards',
                 legendgroup = 'Lines'
             )                        
         ]
@@ -145,7 +149,7 @@ def createMap(subZoneScore, parkConnector_lats, parkConnector_lons, bicycleParki
         margin ={'l':0,'t':0,'b':0,'r':0},
         mapbox = {
             'style': "open-street-map",
-            'center': {'lon': 104, 'lat': 1.37},
+            'center': {'lon': 104, 'lat': 1.39},
             'zoom': 10},
         legend=dict(yanchor = 'top',
                     y = 0.99,
