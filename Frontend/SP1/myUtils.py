@@ -45,17 +45,6 @@ def prepData():
             parkConnector_lats = np.append(parkConnector_lats, None)
             parkConnector_lons = np.append(parkConnector_lons, None)
 
-    bicycleParkingTemp = []
-    with open(file_path3, newline='') as csvfile:
-        csv_reader = csv.reader(csvfile, delimiter=',', quotechar='"')
-        for row in csv_reader:
-            bicycleParkingTemp.append(row)
-    bicycleParkingTemp = pd.DataFrame(bicycleParkingTemp)
-    bicycleParking=bicycleParkingTemp.iloc[1:,:]
-    bicycleParking = bicycleParking.rename(columns = {0:'Description',1:'Lat',2:'Lon',3:'RackType',4:'RackCount',5:'ShelterIndicator'})
-    bicycleParking.reset_index()
-    bicycleParking[["Lat", "Lon"]] = bicycleParking[["Lat", "Lon"]].apply(pd.to_numeric)
-
     basemap = gpd.read_file(file_path4)
     cyclingPath = gpd.read_file(file_path5)
     cyclingPath = cyclingPath.to_crs(basemap.crs)
@@ -75,14 +64,25 @@ def prepData():
             cyclingPath_lats = np.append(cyclingPath_lats, None)
             cyclingPath_lons = np.append(cyclingPath_lons, None)
 
+    bicycleParkingTemp = []
+    with open(file_path3, newline='') as csvfile:
+        csv_reader = csv.reader(csvfile, delimiter=',', quotechar='"')
+        for row in csv_reader:
+            bicycleParkingTemp.append(row)
+    bicycleParkingTemp = pd.DataFrame(bicycleParkingTemp)
+    bicycleParking=bicycleParkingTemp.iloc[1:,:]
+    bicycleParking = bicycleParking.rename(columns = {0:'Description',1:'Lat',2:'Lon',3:'RackType',4:'RackCount',5:'ShelterIndicator'})
+    bicycleParking.reset_index()
+    bicycleParking[["Lat", "Lon"]] = bicycleParking[["Lat", "Lon"]].apply(pd.to_numeric)
+
     hazards = gpd.read_file(file_path6, driver='KML')
     hazards['Lon'] = hazards.geometry.apply(lambda p: p.x)
     hazards['Lat'] = hazards.geometry.apply(lambda p: p.y)
 
-    return subZoneScore, parkConnector_lats, parkConnector_lons, bicycleParking, cyclingPath_lats, cyclingPath_lons, hazards
+    return subZoneScore, parkConnector_lats, parkConnector_lons, cyclingPath_lats, cyclingPath_lons, bicycleParking, hazards
 
 
-def createMap(subZoneScore, parkConnector_lats, parkConnector_lons, bicycleParking, cyclingPath_lats, cyclingPath_lons, hazards): #edf, vdf, edfColMap, vdfColMap, eSizeCol = 'Magnitude', vSizeCol = 'Population Within 100km'):
+def createMap(subZoneScore, parkConnector_lats, parkConnector_lons, cyclingPath_lats, cyclingPath_lons, bicycleParking, hazards): #edf, vdf, edfColMap, vdfColMap, eSizeCol = 'Magnitude', vSizeCol = 'Population Within 100km'):
     '''
     Function to create the map
     '''
@@ -100,11 +100,16 @@ def createMap(subZoneScore, parkConnector_lats, parkConnector_lons, bicycleParki
                 lat=parkConnector_lats,
                 lon=parkConnector_lons,
                 mode='lines',
-                marker=go.scattermapbox.Marker(
-                    size=3,
-                    opacity=0.7
-                ),
+                hovertemplate="Park Connector",
                 name = 'Park Connector',
+                legendgroup = 'Lines'
+            ), 
+            go.Scattermapbox(
+                lat=cyclingPath_lats,
+                lon=cyclingPath_lons,
+                mode='lines',
+                hovertemplate="Cycling Path",
+                name = 'Cycling Paths',
                 legendgroup = 'Lines'
             ),                
             go.Scattermapbox(
@@ -114,31 +119,22 @@ def createMap(subZoneScore, parkConnector_lats, parkConnector_lons, bicycleParki
                 marker=go.scattermapbox.Marker(
                     size=3,
                     opacity=0.7
-                )
-                ,text= bicycleParking["Description"]+ "</br>" + "Number of Racks: " + bicycleParking["RackCount"],
+                ),
+                text= bicycleParking["Description"],
+                hovertext = bicycleParking["RackCount"],
+                hovertemplate="<b>Name</b>: %{text}<br><b>Number of Racks</b>: %{hovertext}",
                 name = 'Bicycle Parking',
                 legendgroup = 'Lines'
             ),
-            go.Scattermapbox(
-                lat=cyclingPath_lats,
-                lon=cyclingPath_lons,
-                mode='lines',
-                marker=go.scattermapbox.Marker(
-                    size=3,
-                    opacity=0.7
-                ),
-                name = 'Cycling Paths',
-                legendgroup = 'Lines'
-            ), 
             go.Scattermapbox(
                 lat=list(hazards["Lat"]),
                 lon=list(hazards['Lon']),
                 mode='markers',
                 marker=go.scattermapbox.Marker(
-                    size=3,
-                    opacity=0.7
+                    size=5
                 )
-                ,text= hazards["Name"]+ "</br>",
+                ,text= hazards["Name"],
+                hovertemplate="<b>Name</b>: %{text}<br><b>Lat</b>: %{lat} <b>Lon</b>: %{lon}",
                 name = 'Hazards',
                 legendgroup = 'Lines'
             )                        
@@ -149,7 +145,7 @@ def createMap(subZoneScore, parkConnector_lats, parkConnector_lons, bicycleParki
         margin ={'l':0,'t':0,'b':0,'r':0},
         mapbox = {
             'style': "open-street-map",
-            'center': {'lon': 104, 'lat': 1.39},
+            'center': {'lon': 103.82904052734375, 'lat': 1.354625368768736},
             'zoom': 10},
         legend=dict(yanchor = 'top',
                     y = 0.99,

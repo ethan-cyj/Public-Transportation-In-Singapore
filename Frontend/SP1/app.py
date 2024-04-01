@@ -21,7 +21,7 @@ city_centers = {
     "Paris": (104, 1.40),
     "New York": (103.8, 1.36)
 }
-subZoneScore, parkConnector_lats, parkConnector_lons, bicycleParking, cyclingPath_lats, cyclingPath_lons, hazards = prepData()
+subZoneScore, parkConnector_lats, parkConnector_lons, cyclingPath_lats, cyclingPath_lons, bicycleParking, hazards = prepData()
 
 
 app_ui = ui.page_fluid(
@@ -35,8 +35,8 @@ app_ui = ui.page_fluid(
         ui.row(
             ui.column(3, 
                 ui.input_checkbox_group(
-                    "toggle", "Show/Hide data layers", {"Index": "Index Scores", "ParkC": "Park Connector", "BicycleP": "Bicycle Parking", "CyclingP": "Cycling Path", "Hazards": "Hazards"},
-                    selected = ["Index", "ParkC", "BicycleP", "CyclingP", "Hazards"]
+                    "toggle", "Show/Hide data layers", {"Index": "Index Scores", "ParkC": "Park Connector", "CyclingP": "Cycling Path", "BicycleP": "Bicycle Parking", "Hazards": "Hazards"},
+                    selected = ["Index", "ParkC", "CyclingP", "BicycleP", "Hazards"]
                 ),
             ),
             ui.input_select( 
@@ -65,20 +65,20 @@ def server(input, output, session):
     
     # @render_plotly
     # def plot():
-    map = createMap(subZoneScore, parkConnector_lats, parkConnector_lons, bicycleParking, cyclingPath_lats, cyclingPath_lons, hazards)
+    map = createMap(subZoneScore, parkConnector_lats, parkConnector_lons, cyclingPath_lats, cyclingPath_lons, bicycleParking, hazards)
     register_widget("map", map)
 
     @reactive.Effect
     def _():
         showI = 'Index' in input.toggle()
         showP = 'ParkC' in input.toggle()
-        showB = 'BicycleP' in input.toggle()
         showC = 'CyclingP' in input.toggle()
+        showB = 'BicycleP' in input.toggle()
         showH = 'Hazards' in input.toggle()
         map.data[0].visible = showI
         map.data[1].visible = showP
-        map.data[2].visible = showB
-        map.data[3].visible = showC
+        map.data[2].visible = showC
+        map.data[3].visible = showB
         map.data[4].visible = showH
 
 
