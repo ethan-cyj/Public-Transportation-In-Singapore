@@ -29,8 +29,20 @@ def prepData():
     # # a map between the normalized and regular columns so that I can plot histograms
     # edfColMap = {'Magnitude':'mag', 'Depth (km)':'depth'}
 
-    #ParkConnectorLoop map #
+    #ParkConnectorLoop map #with bicycleParking
     parkConnector = gpd.read_file(file_path2)
+    bicycleParkingTemp = []
+    with open(r'..\data\unique_bicycle_parking_data.csv', newline='') as csvfile:
+        csv_reader = csv.reader(csvfile, delimiter=',', quotechar='"')
+        for row in csv_reader:
+            bicycleParkingTemp.append(row)
+    bicycleParkingTemp = pd.DataFrame(bicycleParkingTemp)
+    bicycleParking=bicycleParkingTemp.iloc[1:,:]
+    bicycleParking = bicycleParking.rename(columns = {0:'Description',1:'Lat',2:'Lon',3:'RackType',4:'RackCount',5:'ShelterIndicator'})
+    bicycleParking.reset_index()
+    bicycleParking[["Lat", "Lon"]] = bicycleParking[["Lat", "Lon"]].apply(pd.to_numeric)
+
+
 
     # vdf = pd.read_csv('data/volcano.csv')
     # vdf['Population Within 100km'] = np.nan_to_num((vdf['population_within_100_km'] - np.amin(vdf['population_within_100_km']))/(np.amax(vdf['population_within_100_km']) - np.amin(vdf['population_within_100_km']))*50., 0)
@@ -38,10 +50,10 @@ def prepData():
     # # a map between the normalized and regular columns so that I can plot histograms
     # vdfColMap = {'Population Within 100km':'population_within_100_km', 'Elevation (m)':'elevation'}
 
-    return subZoneScore, parkConnector #edf, vdf, edfColMap, vdfColMap
+    return subZoneScore, parkConnector, bicycleParking #edf, vdf, edfColMap, vdfColMap
 
 
-def createMap(subZoneScore, parkConnector): #edf, vdf, edfColMap, vdfColMap, eSizeCol = 'Magnitude', vSizeCol = 'Population Within 100km'):
+def createMap(subZoneScore, parkConnector, bicycleParking): #edf, vdf, edfColMap, vdfColMap, eSizeCol = 'Magnitude', vSizeCol = 'Population Within 100km'):
     '''
     Function to create the map
     '''
