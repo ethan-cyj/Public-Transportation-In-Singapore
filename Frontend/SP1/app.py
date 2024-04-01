@@ -7,6 +7,7 @@ import shapely
 import geopandas as gpd
 import pandas as pd
 from myUtils import prepData, createMap
+import csv
 
 # current_directory = os.getcwd()
 # data_directory = os.path.join(current_directory, 'data') #../../
@@ -16,11 +17,11 @@ from myUtils import prepData, createMap
 # subZoneScore = gpd.GeoDataFrame(subZoneScore)
 
 city_centers = {
-    "London": (103.9, 1.38),
+    "Placeholder": (103.9, 1.38),
     "Paris": (104, 1.40),
     "New York": (103.8, 1.36)
 }
-subZoneScore, parkConnector = prepData()
+subZoneScore, parkConnector_lats, parkConnector_lons, bicycleParking, cyclingPath_lats, cyclingPath_lons, hazards = prepData()
 
 
 app_ui = ui.page_fluid(
@@ -30,29 +31,28 @@ app_ui = ui.page_fluid(
     ui.h4("Use the buttons below to customise plots."),
 
     # UI
-    
     ui.panel_well(
         ui.row(
             ui.column(3, 
                 ui.input_checkbox_group(
-                    "toggle", "Show/Hide data", {"Earthquakes": "Earthquakes (blue)", "Volcanoes": "Volcanoes (red)"},
-                    selected = ["Earthquakes", "Volcanoes"]
+                    "toggle", "Show/Hide data layers", {"Index": "Index Scores", "ParkC": "Park Connector", "BicycleP": "Bicycle Parking", "CyclingP": "Cycling Path", "Hazards": "Hazards"},
+                    selected = ["Index", "ParkC", "BicycleP", "CyclingP", "Hazards"]
                 ),
             ),
-            ui.input_select(
+            ui.input_select( 
                 "center",
-                "Center",
+                "Focus on Subzone",
                 choices=list(city_centers.keys())
             ),
             # Set step to 5 for intervals of 5 minutes
             ui.input_slider(
                 "n_min",
-                "Select Maximum Time (in minutes)",
+                "Adjust Parameters",
                 min=10, max=60, value=5, step=5
             )
         )
     ),
-    output_widget("plot")
+    output_widget("map")
 )
 
 
@@ -63,40 +63,23 @@ def server(input, output, session):
     #@output
     #@render_widget
     
-    @render_plotly
-    def plot():
-        map = createMap(subZoneScore, parkConnector)
-        register_widget("map", map)
+    # @render_plotly
+    # def plot():
+    map = createMap(subZoneScore, parkConnector_lats, parkConnector_lons, bicycleParking, cyclingPath_lats, cyclingPath_lons, hazards)
+    register_widget("map", map)
 
     @reactive.Effect
     def _():
-        showE = 'Earthquakes' in input.toggle()
-        showV = 'Volcanoes' in input.toggle()
-        map.data[0].visible = showE
-        map.data[1].visible = showV
+        showI = 'Index' in input.toggle()
+        showP = 'ParkC' in input.toggle()
+        showB = 'BicycleP' in input.toggle()
+        showC = 'CyclingP' in input.toggle()
+        showH = 'Hazards' in input.toggle()
+        map.data[0].visible = showI
+        map.data[1].visible = showP
+        map.data[2].visible = showB
+        map.data[3].visible = showC
+        map.data[4].visible = showH
 
-
-        # fig = go.Figure(go.Choroplethmapbox(
-        #            geojson=json.loads(subZoneScore.geometry.to_json()),
-        #            locations=subZoneScore.index,
-        #            colorscale="mint",
-        #            z=subZoneScore['score'],
-        #            text = subZoneScore['DESCRIPTION'],
-        #            hovertemplate="%{text}<br><br><span style = \"font-size: 1.2em;\"><b>Overall Score: </b>: %{z}</span>"
-        #            ))
-        # fig.update_layout(
-        #     margin ={'l':0,'t':0,'b':0,'r':0},
-        #     mapbox = {
-        #         'center': {'lon': 103.9, 'lat': 1.38},
-        #         'style': "open-street-map",
-        #         'center': {'lon': 103.9, 'lat': 1.38},
-        #         'zoom': 10})
-        # return fig
-
-# @reactive.effect
-# def _():
-#     plot.widget.center = city_centers[input.center()]
 
 app = App(app_ui, server)
-# if __name__ == "__main__":
-#     app.run()
