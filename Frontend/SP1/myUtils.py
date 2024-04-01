@@ -9,6 +9,15 @@ import csv
 import fiona
 fiona.drvsupport.supported_drivers['KML'] = 'rw'
 
+def city_centers(subZoneScore):
+    result = {}
+    for index, row in df.iterrows():
+        name = subZoneScore['SUBZONE_N']
+        center = subZoneScore['geometry'].centroid
+        lat,lon = center.xy
+        result[name] = {'lon':lon, 'lat':lat}
+    return result
+
 
 def prepData():
     ''' 
@@ -91,7 +100,7 @@ def createMap(subZoneScore, parkConnector_lats, parkConnector_lons, cyclingPath_
             go.Choroplethmapbox(
                 geojson=json.loads(subZoneScore.geometry.to_json()),
                 locations=subZoneScore.index,
-                colorscale="mint",
+                colorscale=['rgba(50, 108, 110, 0.5)', 'rgba(32, 88, 95, 1.0)'],
                 z=subZoneScore['score'],
                 text = subZoneScore['DESCRIPTION'],
                 hovertemplate="%{text}<br><br><span style = \"font-size: 1.2em;\"><b>Overall Score: </b>: %{z}</span>"
