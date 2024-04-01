@@ -14,6 +14,7 @@ def prepData():
     data_directory = os.path.join(current_directory, 'data') #../../
     file_path1 = os.path.join(data_directory, 'subZoneScore.csv')
     file_path2 = os.path.join(data_directory, 'ParkConnectorLoop.geojson')
+    file_path3 = os.path.join(data_directory, 'unique_bicycle_parking_data.csv')
 
 
     #Index Map
@@ -31,8 +32,9 @@ def prepData():
 
     #ParkConnectorLoop map #with bicycleParking
     parkConnector = gpd.read_file(file_path2)
+
     bicycleParkingTemp = []
-    with open(r'..\data\unique_bicycle_parking_data.csv', newline='') as csvfile:
+    with open(file_path3, newline='') as csvfile:
         csv_reader = csv.reader(csvfile, delimiter=',', quotechar='"')
         for row in csv_reader:
             bicycleParkingTemp.append(row)
