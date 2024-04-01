@@ -1,4 +1,9 @@
 import plotly.graph_objects as go
+import os
+import json
+import shapely
+import geopandas as gpd
+import pandas as pd
 
 
 def prepData():
@@ -24,22 +29,54 @@ def prepData():
     # # a map between the normalized and regular columns so that I can plot histograms
     # edfColMap = {'Magnitude':'mag', 'Depth (km)':'depth'}
 
-    #ParkConnectorLoop map #parkConnector = gpd.read_file(r"..\data\ParkConnectorLoop.geojson")
-    vdf = pd.read_csv('data/volcano.csv')
-    vdf['Population Within 100km'] = np.nan_to_num((vdf['population_within_100_km'] - np.amin(vdf['population_within_100_km']))/(np.amax(vdf['population_within_100_km']) - np.amin(vdf['population_within_100_km']))*50., 0)
-    vdf['Elevation (m)'] = np.nan_to_num(((vdf['elevation'] - np.amin(vdf['elevation']))/(np.amax(vdf['elevation']) - np.amin(vdf['elevation'])))*20., 0)
-    # a map between the normalized and regular columns so that I can plot histograms
-    vdfColMap = {'Population Within 100km':'population_within_100_km', 'Elevation (m)':'elevation'}
+    #ParkConnectorLoop map #
+    parkConnector = gpd.read_file(file_path2)
 
-    return edf, vdf #, edfColMap, vdfColMap
+    # vdf = pd.read_csv('data/volcano.csv')
+    # vdf['Population Within 100km'] = np.nan_to_num((vdf['population_within_100_km'] - np.amin(vdf['population_within_100_km']))/(np.amax(vdf['population_within_100_km']) - np.amin(vdf['population_within_100_km']))*50., 0)
+    # vdf['Elevation (m)'] = np.nan_to_num(((vdf['elevation'] - np.amin(vdf['elevation']))/(np.amax(vdf['elevation']) - np.amin(vdf['elevation'])))*20., 0)
+    # # a map between the normalized and regular columns so that I can plot histograms
+    # vdfColMap = {'Population Within 100km':'population_within_100_km', 'Elevation (m)':'elevation'}
+
+    return subZoneScore, parkConnector #edf, vdf, edfColMap, vdfColMap
 
 
-def createMap(edf, vdf, edfColMap, vdfColMap, eSizeCol = 'Magnitude', vSizeCol = 'Population Within 100km'):
+def createMap(subZoneScore, parkConnector): #edf, vdf, edfColMap, vdfColMap, eSizeCol = 'Magnitude', vSizeCol = 'Population Within 100km'):
     '''
     Function to create the map
     '''
-
     fig = go.FigureWidget(
+        data = [
+            go.Choroplethmapbox(
+                geojson=json.loads(subZoneScore.geometry.to_json()),
+                locations=subZoneScore.index,
+                colorscale="mint",
+                z=subZoneScore['score'],
+                text = subZoneScore['DESCRIPTION'],
+                hovertemplate="%{text}<br><br><span style = \"font-size: 1.2em;\"><b>Overall Score: </b>: %{z}</span>"
+                ),
+            go.Scattermapbox(
+                lat=list(bicycleParking["Lat"]),
+                lon=list(bicycleParking['Lon']),
+                mode='markers',
+                marker=go.scattermapbox.Marker(
+                    size=3,
+                    opacity=0.7
+                )
+                ,text= bicycleParking["Description"]+ "</br>" + "Number of Racks: " + bicycleParking["RackCount"]
+            )
+        ]
+    )
+
+    fig.update_layout(
+        margin ={'l':0,'t':0,'b':0,'r':0},
+        mapbox = {
+            'center': {'lon': 103.9, 'lat': 1.38},
+            'style': "open-street-map",
+            'center': {'lon': 103.9, 'lat': 1.38},
+            'zoom': 10})
+
+    '''fig = go.FigureWidget(
         data = [
             go.Scattermapbox(
                 lat = edf['latitude'],
@@ -82,6 +119,6 @@ def createMap(edf, vdf, edfColMap, vdfColMap, eSizeCol = 'Magnitude', vSizeCol =
             ),
             showlegend = False,
         )
-    )
+    )'''
 
     return fig
