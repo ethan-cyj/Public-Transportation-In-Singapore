@@ -103,7 +103,8 @@ def createMap(subZoneScore, parkConnector_lats, parkConnector_lons, bicycleParki
                 marker=go.scattermapbox.Marker(
                     size=3,
                     opacity=0.7
-                )
+                ),
+                legendgroup = 'Lines'
             ),                
             go.Scattermapbox(
                 lat=list(bicycleParking["Lat"]),
@@ -113,7 +114,8 @@ def createMap(subZoneScore, parkConnector_lats, parkConnector_lons, bicycleParki
                     size=3,
                     opacity=0.7
                 )
-                ,text= bicycleParking["Description"]+ "</br>" + "Number of Racks: " + bicycleParking["RackCount"]
+                ,text= bicycleParking["Description"]+ "</br>" + "Number of Racks: " + bicycleParking["RackCount"],
+                legendgroup = 'Lines'
             ),
             go.Scattermapbox(
                 lat=cyclingPath_lats,
@@ -122,7 +124,8 @@ def createMap(subZoneScore, parkConnector_lats, parkConnector_lons, bicycleParki
                 marker=go.scattermapbox.Marker(
                     size=3,
                     opacity=0.7
-                )
+                ),
+                legendgroup = 'Lines'
             ), 
             go.Scattermapbox(
                 lat=list(hazards["Lat"]),
@@ -132,7 +135,8 @@ def createMap(subZoneScore, parkConnector_lats, parkConnector_lons, bicycleParki
                     size=3,
                     opacity=0.7
                 )
-                ,text= hazards["Name"]+ "</br>"
+                ,text= hazards["Name"]+ "</br>",
+                legendgroup = 'Lines'
             )                        
         ]
     )
@@ -140,10 +144,14 @@ def createMap(subZoneScore, parkConnector_lats, parkConnector_lons, bicycleParki
     fig.update_layout(
         margin ={'l':0,'t':0,'b':0,'r':0},
         mapbox = {
-            'center': {'lon': 103.9, 'lat': 1.38},
             'style': "open-street-map",
-            'center': {'lon': 103.9, 'lat': 1.38},
-            'zoom': 10})
+            'center': {'lon': 104, 'lat': 1.37},
+            'zoom': 10},
+        legend=dict(yanchor = 'top',
+                    y = 0.99,
+                    x=0.99,
+                    xanchor = 'right')
+                    )
 
 
     return fig
