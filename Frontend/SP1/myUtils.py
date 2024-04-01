@@ -132,7 +132,7 @@ def createMap(subZoneScore, parkConnector_lats, parkConnector_lons, bicycleParki
                     size=3,
                     opacity=0.7
                 )
-                ,text= hazards["Name"]+ "</br>" + "Lat: " + hazards["Lat"] + "   " + hazards['Lon'] 
+                ,text= hazards["Name"]+ "</br>"
             )                        
         ]
     )
