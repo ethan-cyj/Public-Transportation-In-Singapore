@@ -31,10 +31,11 @@ coords = mrt_df[['Latitude', 'Longitude']].values.tolist()
 
 app_ui = ui.page_fluid(
     ui.h2("Transport Medium"),
-    ui.input_select(
+    ui.input_selectize(
         "transport_means",
         "Select the means of movement",
-        ["Bus", "Bicycle", "MRT", "Public_Transport"]
+        ["Bus", "Bicycle", "MRT", "Public_Transport"],
+        multiple=True
     ),
     ui.input_selectize(
         "station",
@@ -84,38 +85,40 @@ def server(input, output, session):
 
         # Fetch and add isochrones for each selected MRT station
         for mrt_name in input.station():
-            # Extracting color and coordinates for the current MRT station
-            station_row = mrt_df[mrt_df['MRT.Name'] == mrt_name].iloc[0]
-            color = station_row["Color"]
-            lat, lon = station_row['Latitude'], station_row['Longitude']
-            
-            # Convert cutoff to minutes, e.g. "15M" to 15
-            cutoff = int(input.n_min())
-            
-            # Fetch the isochrone data
-            isochrone = get_isochrone(name=mrt_name, mode=input.transport_means().lower(), cutoff=cutoff)
-            lon_coords = [coord[0] for coord in isochrone]
-            lat_coords = [coord[1] for coord in isochrone]
+            for transport_means in input.transport_means():
+                transport_means = transport_means.lower()
+                # Extracting color and coordinates for the current MRT station
+                station_row = mrt_df[mrt_df['MRT.Name'] == mrt_name].iloc[0]
+                color = station_row["Color"]
+                lat, lon = station_row['Latitude'], station_row['Longitude']
                 
-            # Add isochrone as a trace
-            fig.add_trace(go.Scattermapbox(
-                mode="lines",
-                lon=lon_coords,
-                lat=lat_coords,
-                name=f"Isochrone {lat}, {lon}",
-                line=dict(width=1, color=color),
-                fill="toself"
-            ))
-            # Add MRT station as a marker
-            fig.add_trace(go.Scattermapbox(
-                mode="markers",
-                lon=[lon],
-                lat=[lat],
-                text=[mrt_name],
-                name=mrt_name,
-                marker=dict(size=10, color=color),
-                textposition="bottom center"
-            ))
+                # Convert cutoff to minutes, e.g. "15M" to 15
+                cutoff = int(input.n_min())
+                
+                # Fetch the isochrone data
+                isochrone = get_isochrone(name=mrt_name, mode=transport_means, cutoff=cutoff)
+                lon_coords = [coord[0] for coord in isochrone]
+                lat_coords = [coord[1] for coord in isochrone]
+                    
+                # Add isochrone as a trace
+                fig.add_trace(go.Scattermapbox(
+                    mode="lines",
+                    lon=lon_coords,
+                    lat=lat_coords,
+                    name=f"Isochrone {lat}, {lon}",
+                    line=dict(width=1, color=color),
+                    fill="toself"
+                ))
+                # Add MRT station as a marker
+                fig.add_trace(go.Scattermapbox(
+                    mode="markers",
+                    lon=[lon],
+                    lat=[lat],
+                    text=[mrt_name],
+                    name=mrt_name,
+                    marker=dict(size=10, color=color),
+                    textposition="bottom center"
+                ))
 
         # Update the layout to match the provided example
         fig.update_layout(
