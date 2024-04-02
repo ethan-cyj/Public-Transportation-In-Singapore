@@ -6,7 +6,7 @@ import json
 import shapely
 import geopandas as gpd
 import pandas as pd
-from myUtils import prepData, createMap
+from myUtils import prepData, createMap, city_centers
 import csv
 
 # current_directory = os.getcwd()
@@ -17,21 +17,21 @@ import csv
 # subZoneScore = gpd.GeoDataFrame(subZoneScore)
 
 
-# {
-#     "Placeholder": dict(lon=103.9, lat=1.38),
-#     "Paris": dict(lon=104, lat=1.40),
-#     "New York":dict(lon=103.8, lat=1.36)
-# }
+city_centers = {
+    "Placeholder": dict(lon=103.9, lat=1.38),
+    "Paris": dict(lon=104, lat=1.40),
+    "New York":dict(lon=103.8, lat=1.36)
+}
 
 
-def update_opacity(zone):
-    new_opacity = [0.2 if z != zone else 1 for z in subZoneScore['zone']]
-    with map.batch_update():
-        map.data[0].opacity = new_opacity
+# def update_opacity(zone):
+#     new_opacity = [0.2 if z != zone else 1 for z in subZoneScore['zone']]
+#     with map.batch_update():
+#         map.data[0].opacity = new_opacity
 
 subZoneScore, parkConnector_lats, parkConnector_lons, cyclingPath_lats, cyclingPath_lons, bicycleParking, hazards = prepData()
 
-city_centers = city_centers(subZoneScore)
+# city_centers = city_centers(subZoneScore)
 
 app_ui = ui.page_fluid(
     # title
@@ -53,16 +53,12 @@ app_ui = ui.page_fluid(
                 "Focus on Subzone",
                 choices=list(city_centers.keys())
             ),
-            # Set step to 5 for intervals of 5 minutes
             ui.input_slider(
                 "n_min",
                 "Adjust Parameters",
                 min=10, max=60, value=5, step=5
             )
         ),
-        ui.row(
-            ui.output_text_verbatim("stuff")
-        )
     ),
     output_widget("map")
 )
@@ -93,11 +89,6 @@ def server(input, output, session):
         map.data[3].visible = showB
         map.data[4].visible = showH
         sel = input.select()
-        map.layout.mapbox.center = city_centers[sel]
-
-
-
-    # def stuff():
-    #     return "things"
+        # map.layout.mapbox.center = city_centers[sel]
 
 app = App(app_ui, server)
