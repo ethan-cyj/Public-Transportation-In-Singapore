@@ -8,21 +8,7 @@ import geopandas as gpd
 import pandas as pd
 from myUtils import prepData, createMap, city_centers
 import csv
-
-# current_directory = os.getcwd()
-# data_directory = os.path.join(current_directory, 'data') #../../
-# file_path1 = os.path.join(data_directory, 'subZoneScore.csv')
-# subZoneScore = pd.read_csv(file_path1)
-# subZoneScore['geometry'] = subZoneScore['geometry'].apply(shapely.from_wkt)
-# subZoneScore = gpd.GeoDataFrame(subZoneScore)
-
-
-city_centers = {
-    "Placeholder": dict(lon=103.9, lat=1.38),
-    "Paris": dict(lon=104, lat=1.40),
-    "New York":dict(lon=103.8, lat=1.36)
-}
-
+import numpy as np
 
 # def update_opacity(zone):
 #     new_opacity = [0.2 if z != zone else 1 for z in subZoneScore['zone']]
@@ -31,7 +17,11 @@ city_centers = {
 
 subZoneScore, parkConnector_lats, parkConnector_lons, cyclingPath_lats, cyclingPath_lons, bicycleParking, hazards = prepData()
 
-# city_centers = city_centers(subZoneScore)
+city_centers = city_centers(subZoneScore)
+# city_centers = {'Singapore': dict(lon=103.82904052734375, lat= 1.354625368768736)}
+# city_centers.update(city_centers1)
+area = subZoneScore[['SUBZONE_N','SHAPE_Area']]
+score = subZoneScore[['SUBZONE_N','score']]
 
 app_ui = ui.page_fluid(
     # title
@@ -60,19 +50,18 @@ app_ui = ui.page_fluid(
             )
         ),
     ),
-    output_widget("map")
+    ui.panel_well(
+        ui.row(
+            ui.output_text_verbatim("txt")
+        )
+    ),
+        output_widget("map")
 )
 
 
 
 def server(input, output, session):
 
-
-    #@output
-    #@render_widget
-    
-    # @render_plotly
-    # def plot():
     map = createMap(subZoneScore, parkConnector_lats, parkConnector_lons, cyclingPath_lats, cyclingPath_lons, bicycleParking, hazards)
     register_widget("map", map)
 
@@ -89,6 +78,13 @@ def server(input, output, session):
         map.data[3].visible = showB
         map.data[4].visible = showH
         sel = input.select()
-        # map.layout.mapbox.center = city_centers[sel]
+        map.layout.mapbox.center = city_centers[sel]
+        map.layout.mapbox.zoom = np.log(area.loc[area['SUBZONE_N']==sel, 'SHAPE_Area'].values[0])
+
+        @render.text
+        def txt():
+            return f"{sel} has {'good' if score.loc[score['SUBZONE_N']==sel, 'score'].values[0] >0.5 else 'bad'} cycling infrastrucure overall. It is ranked XXXX"
+#pop up showing recommendations for subzone
 
 app = App(app_ui, server)
+

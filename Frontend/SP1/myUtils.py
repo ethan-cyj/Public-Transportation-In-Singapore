@@ -14,7 +14,7 @@ def city_centers(subZoneScore):
     for index, row in subZoneScore.iterrows():
         name = row['SUBZONE_N']
         center = row['geometry'].centroid
-        lat,lon = center.xy
+        lon,lat = center.xy
         result[name] = {'lon':lon[0], 'lat':lat[0]}
     return result
 
