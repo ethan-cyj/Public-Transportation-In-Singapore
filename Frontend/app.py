@@ -1,4 +1,4 @@
-from shiny import App, render, ui
+from shiny import App, render, ui, session, Inputs, Outputs, reactive
 from sklearn.cluster import KMeans
 from shinyswatch import theme
 import numpy as np
@@ -8,15 +8,21 @@ from selenium import webdriver
 from shinywidgets import output_widget, render_widget
 import plotly.express as px
 import plotly.graph_objs as go
-from htmltools import HTMLDependency
-import geopandas as gpd
-from shapely import Point
 import json 
-from pathlib import Path
-from bs4 import BeautifulSoup
+import app_utils as utils
+from itables.shiny import DT
 
 current_directory = os.getcwd()
 data_directory = os.path.join(current_directory, 'data')
+
+#SP1 File Reading
+
+
+#SP2 File Reading
+basemap,cluster_ranking = utils.SP2_prep_Chloropeth_Map()
+Centroid_MRT_df = utils.SP2_Prep_Centroid_MRT_Metrics()
+
+#SP3 File Reading
 isochrone_directory = os.path.join(current_directory, 'data\Isochrone_data')
 file_path1 = os.path.join(isochrone_directory, 'mrt_station_colours.csv')
 mrt_df = pd.read_csv(file_path1)
@@ -29,8 +35,6 @@ new_color_map = {
     'brown': '#a67440',
     'grey': '#7c8981',
 }
-
-
 mrt_df['Color'] = mrt_df['Color'].map(new_color_map)
 bus_isochrones = pd.read_json(os.path.join(isochrone_directory, 'bus_isochrones.json'), orient='records', lines=True)
 bicycle_isochrones = pd.read_json(os.path.join(isochrone_directory, 'bicycle_isochrones.json'), orient='records', lines=True)
@@ -38,25 +42,50 @@ mrt_isochrones = pd.read_json(os.path.join(isochrone_directory, 'mrt_isochrones.
 public_transport_isochrones = pd.read_json(os.path.join(isochrone_directory, 'public_isochrones.json'), orient='records', lines=True)
 mrt_names = mrt_df['MRT.Name'].values.tolist()
 coords = mrt_df[['Latitude', 'Longitude']].values.tolist()
-basemap = gpd.read_file(os.path.join(data_directory, 'MasterPlan2019PlanningAreaBoundaryNoSea.geojson'))
-mrt_stations_df = pd.read_csv(os.path.join(data_directory, 'Cluster_data','mrt_station_final.csv'),usecols = [1,2,3])
-cluster_ranking = pd.read_csv(os.path.join(data_directory,'Cluster_data','5_cluster_mrt_ranking.csv'))
 
 
 app_ui = ui.page_navbar(
     theme.minty(),
     ui.nav_panel("Sub-Problem 1: Cycling infrastructure suitability index","a"),
     ui.nav_panel("Sub-Problem 2: Last Mile Acessibility Index",
-                 ui.h2("Rankings by Planning Area"),
-                 ui.input_select("metrics", "Select Metric for Comparison", 
-                                 choices=["Distance","Suitability", "Time Savings", "Weighted Score"],
-                                 selected = "Distance"),
-                ui.layout_columns(
-                    ui.card(
-                        output_widget("chloropeth_map")
+                ui.navset_tab(
+                    ui.nav_panel("For Policy Makers",
+                        ui.h2("Rankings by Planning Area"),
+                        ui.row(
+                            ui.column(3,ui.input_select("metrics", 
+                                                        "Select Metric for Comparison", 
+                                                        choices=["Distance","Suitability", "Time Savings", 'Time Savings(Log)',"Weighted Score"],
+                                                        selected = "Distance")),
+                            ui.column(3,ui.input_checkbox("exclude",
+                                                          "Exclude Changi & Tuas",
+                                                          value = False)),
+                            ui.column(6,ui.card(ui.p("placeholder")))                              
+                        ),
+                        ui.row(
+                            ui.layout_columns(
+                                ui.card(
+                                    output_widget("chloropeth_map")
+                                ),
+                                ui.card(
+                                    ui.p("placeholder")
+                                )
+                            )
+                        )
                     ),
-                    ui.card(
-#                        ui.output_data_frame("path_metric")
+                    ui.nav_panel("For Prospective Cyclists",
+                        ui.page_sidebar(
+                            ui.sidebar(
+                                ui.input_numeric("w1", "Weight for Distance", value=0, min=-1, max=0, step=0.1),
+                                ui.input_numeric("w2", "Weight for Suitability", value=0, min=0, max=1, step=0.1),
+                                ui.input_numeric("w3", "Weight for Time Savings", value=0, min=0, max=1, step=0.1),
+                                ui.input_numeric("w4", "Weight for Steepness", value=0, min=-1, max=0, step=0.1),
+                                ui.help_text("Note: Weights should sum to 1.0"),
+                                ui.output_text_verbatim("check_sum")
+                            ),
+                            ui.card(
+                                ui.output_ui("centroid_mrt_metrics")
+                            )
+                        )
                     )
                 )
     ),
@@ -90,72 +119,62 @@ app_ui = ui.page_navbar(
     )
 
 def server(input, output, session):
-    #SP2 Functions
-    def extract_td_contents(html):
-        soup = BeautifulSoup(html, 'html.parser')
-        table = soup.find('table')
-        rows = table.find_all('tr')
 
-        td_contents = []
-        for row in rows:
-            cells = row.find_all('td')
-            for cell in cells:
-                td_contents.append(cell.text.strip())
 
-        return td_contents
 
-    basemap = gpd.read_file(os.path.join(data_directory, 'MasterPlan2019PlanningAreaBoundaryNoSea.geojson'))
-    mrt_stations_df = pd.read_csv(os.path.join(data_directory, 'Cluster_data','mrt_station_final.csv'),usecols = [1,2,3])
-    cluster_ranking = pd.read_csv(os.path.join(data_directory,'Cluster_data','5_cluster_mrt_ranking.csv'))
-    
-    basemap['Planning_Area'] = basemap["Description"].apply(lambda x:extract_td_contents(x)[0])
-    basemap['geometry'] = basemap['geometry'].to_crs("4326")
-
-    mrt_stations_df.sort_values(by='MRT.Name', inplace=True)
-    
-    for index, row in cluster_ranking.iterrows():
-        point_coordinate = Point(row['Longitude'], row['Latitude'])
-        Planning_Area = basemap[basemap.geometry.contains(point_coordinate)]['Planning_Area'].reset_index(drop=True)
-        cluster_ranking.loc[index, 'Planning_Area'] = Planning_Area.values[0]
-
-    cluster_ranking = cluster_ranking.rename(columns = {'MRT.Name':'MRT Name',
-                                                        'time_difference':'Time Savings',
-                                                        'Weighted_Score':'Weighted Score',
-                                                        'suitability':'Suitability',
-                                                        'distance':'Distance'})
-    
-    path_metrics = pd.read_csv(os.path.join(data_directory, 'path_metrics.csv'))
-    path_metrics = path_metrics.astype(str)
-
+    #SP2 Calls
     @output 
     @render_widget
     def chloropeth_map():
         df = cluster_ranking.groupby('Planning_Area').agg({input.metrics():'mean'}).reset_index()
         basemap_modified = pd.merge(basemap, df, left_on='Planning_Area', right_on='Planning_Area', how='left')
+
         fig = go.Figure()
+
         fig.add_trace(go.Choroplethmapbox(geojson=json.loads(basemap_modified.geometry.to_json()), 
                                    locations=basemap_modified.index,
                                    z=basemap_modified[input.metrics()],
+                                   name = input.metrics(),
+                                   visible = not input.exclude(),
                                    colorscale='RdYlGn',
                                    hoverinfo = 'text',
                                    text = ("Planning Area: " + basemap_modified['Planning_Area'] + '<br>' + 
                                            "Average " + input.metrics() + " of Paths Within the Area: " + round(basemap_modified[input.metrics()],2).astype(str) )))
+        
+        basemap_modified_exclude = basemap_modified[~basemap_modified['Planning_Area'].isin(['CHANGI','TUAS'])]
+
+        fig.add_trace(go.Choroplethmapbox(geojson=json.loads(basemap_modified_exclude.geometry.to_json()), 
+                                   locations=basemap_modified_exclude.index,
+                                   z=basemap_modified_exclude[input.metrics()],
+                                   name = input.metrics() + "2",
+                                   colorscale='RdYlGn',
+                                   visible= input.exclude(),
+                                   hoverinfo = 'text',
+                                   text = ("Planning Area: " + basemap_modified_exclude['Planning_Area'] + '<br>' + 
+                                           "Average " + input.metrics() + " of Paths Within the Area: " + round(basemap_modified_exclude[input.metrics()],2).astype(str) )))        
 
         fig.update_layout(
             margin={'l':0,'t':0,'b':0,'r':0},
             mapbox={
                 'style': "open-street-map",
                 'center': {'lat': 1.36, 'lon': 103.85},
-                'zoom': 10
+                'zoom':9
             }
         )
         return fig
-    
-    @output
-    @render.data_frame
-    def path_metric():
-        return render.DataTable(path_metrics,width = "100%",height = "300px")
 
+    @render.ui
+    def centroid_mrt_metrics():
+        Centroid_MRT_df['weighted_score'] = utils.calculate_weighted_score(Centroid_MRT_df,input.w1(),input.w2(),input.w3(),input.w4())
+        return ui.HTML(DT(Centroid_MRT_df[['weighted_score','centroid_name','MRT.Name','Planning_Area','distance','suitability','time_difference','steepness','Latitude_x','Longitude_x','Latitude_y','Longitude_y']],filters=True, maxBytes = 0))
+        
+    @render.text
+    def check_sum():
+        sum_weights = input.w1() + input.w2() + input.w3() + input.w4()
+        if sum_weights == 1:
+            return "Acceptable : Weights sum to 1.0"
+        else:
+            return "WARNING : Weights do not sum to 1.0"
     
     #SP3
     def get_isochrone(name, mode, cutoff):
