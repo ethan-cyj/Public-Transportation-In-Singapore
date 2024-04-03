@@ -50,7 +50,13 @@ app_ui = ui.page_navbar(
     ui.nav_panel("Sub-Problem 2: Last Mile Acessibility Index",
                 ui.navset_tab(
                     ui.nav_panel("For Policy Makers",
-                        ui.h2("Rankings by Planning Area"),
+                        ui.h2("Rankings by Planning Area using nearest 5 cluster method"),
+                        ui.help_text(
+                                    '''
+                                    What is nearest 5 cluster method? This method involves obtaining the 5 nearest residential clusters to each MRT and obtaining path metrics through LTA OneMap and OpenrouteService. 
+                                    The mean of the metric of interest for each planning area is then calculated by averaging that metric of all such paths within the planning area. This method is used to obtain the rankings by planning area for the metric of interest.
+                                    '''
+                                     ),
                         ui.row(
                             ui.column(3,ui.input_select("metrics", 
                                                         "Select Metric for Comparison", 
@@ -59,7 +65,7 @@ app_ui = ui.page_navbar(
                             ui.column(3,ui.input_checkbox("exclude",
                                                           "Exclude Changi & Tuas",
                                                           value = False)),
-                            ui.column(6,ui.card(ui.p("placeholder")))                              
+                            ui.column(6,ui.card(ui.output_text("Metric_Description")))                              
                         ),
                         ui.row(
                             ui.layout_columns(
@@ -73,6 +79,8 @@ app_ui = ui.page_navbar(
                         )
                     ),
                     ui.nav_panel("For Prospective Cyclists",
+                        ui.h2("Table of path metrics for paths of indivual transport stations to residential centroids"),
+                        ui.help_text("Filter,sort, and adjust the weights to calculate the weighted score for paths connecting residential centroids to their nearest MRT/LRT station"),
                         ui.page_sidebar(
                             ui.sidebar(
                                 ui.input_numeric("w1", "Weight for Distance", value=0, min=-1, max=0, step=0.1),
@@ -175,6 +183,37 @@ def server(input, output, session):
             return "Acceptable : Weights sum to 1.0"
         else:
             return "WARNING : Weights do not sum to 1.0"
+
+    @render.text
+    def Metric_Description():
+        if input.metrics() == "Distance":
+            return (
+            """
+            Distance: The distance from transport stations to residential centroids\n
+            The aggregate mean of all such distances within the planning area
+            """
+            )
+        elif input.metrics() == "Suitability":
+            return (
+                '''
+                Suitability: The suitability of paths from transport stations to residential centroids\n
+                The aggregate mean of all such suitability of paths within the planning area
+                '''
+            )     
+        elif input.metrics() == "Time Savings":
+            return (
+                '''
+                Time Savings: The time savings of paths -(cycle timing - public transport transit timing) from transport stations to residential centroids\n
+                The aggregate mean of all such time savings of paths within the planning area
+                '''
+            )
+        else:
+            return (
+                '''
+                Time Savings (Log): The log of the time savings of paths -(cycle timing - public transport transit timing) from transport stations to residential centroids\n
+                The aggregate mean of all such time savings of paths within the planning area
+                ''' 
+            )
     
     #SP3
     def get_isochrone(name, mode, cutoff):
