@@ -188,7 +188,7 @@ def server(input, output, session):
             return '\n'.join(lines)
         else:
             # Generate the initial text string
-            initial_text = f"You are trying to find the maximum distance that can be travelled within {input.n_min()} minutes by from the following stations:"
+            initial_text = f"You are trying to find the maximum distance that can be travelled within {input.n_min()} minutes by (Transport Means) from the following stations:"
             # Initialize an empty list to store the lines
             lines = [initial_text]
             # Iterate over each station in the tuple
