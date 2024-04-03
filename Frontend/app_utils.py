@@ -67,7 +67,16 @@ def SP2_Prep_Centroid_MRT_Metrics():
 
     return output
 
-def calculate_weighted_score(dataframe,row1,row2,row3,row4):
-    S = row1 * dataframe["distance"] + row2 * dataframe['suitability'] + row3 * dataframe["time_difference"] + row4 * dataframe["steepness"]
-    return S
+# def calculate_weighted_score(dataframe,row1,row2,row3,row4):
+#     S = row1 * dataframe["distance"] + row2 * dataframe['suitability'] + row3 * dataframe["time_difference"] + row4 * dataframe["steepness"]
+#     return S
 
+def calculate_weighted_score(dataframe, row1, row2, row3, row4):
+    numeric_columns = dataframe.select_dtypes(include='number')
+    standardized_numeric_columns = (numeric_columns - numeric_columns.mean()) / numeric_columns.std()
+    S = row1 * standardized_numeric_columns["distance"] + row2 * standardized_numeric_columns['suitability'] + row3 * standardized_numeric_columns["time_difference"] + row4 * standardized_numeric_columns["steepness"]
+    
+    # Normalize S to a 0-100 range
+    S_normalized = (S - S.min()) / (S.max() - S.min()) * 100
+    
+    return S_normalized

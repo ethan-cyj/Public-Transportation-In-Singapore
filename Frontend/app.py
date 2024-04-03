@@ -179,8 +179,9 @@ def server(input, output, session):
     @render.text
     def check_sum():
         sum_weights = input.w1() + input.w2() + input.w3() + input.w4()
-        if sum_weights == 1:
-            return "Acceptable : Weights sum to 1.0"
+        tolerance = 1e-10  # Set a small tolerance
+        if abs(sum_weights - 1.0) < tolerance:
+            return "Acceptable : Weights sum to 1.0" 
         else:
             return "WARNING : Weights do not sum to 1.0"
 
@@ -189,28 +190,29 @@ def server(input, output, session):
         if input.metrics() == "Distance":
             return (
             """
-            Distance: The distance from transport stations to residential centroids\n
+            Distance: The distance from transport stations to residential centroids
             The aggregate mean of all such distances within the planning area
             """
             )
         elif input.metrics() == "Suitability":
             return (
                 '''
-                Suitability: The suitability of paths from transport stations to residential centroids\n
+                Suitability: The suitability of paths from transport stations to residential centroids(Obtained from ORS).
+                Judges how suitable the way is based on characteristics of the route and the profile
                 The aggregate mean of all such suitability of paths within the planning area
                 '''
             )     
         elif input.metrics() == "Time Savings":
             return (
                 '''
-                Time Savings: The time savings of paths -(cycle timing - public transport transit timing) from transport stations to residential centroids\n
+                Time Savings: The time savings of paths -(cycle timing - public transport transit timing) from transport stations to residential centroids.
                 The aggregate mean of all such time savings of paths within the planning area
                 '''
             )
         else:
             return (
                 '''
-                Time Savings (Log): The log of the time savings of paths -(cycle timing - public transport transit timing) from transport stations to residential centroids\n
+                Time Savings (Log): The log of the time savings of paths -(cycle timing - public transport transit timing) from transport stations to residential centroids.
                 The aggregate mean of all such time savings of paths within the planning area
                 ''' 
             )
