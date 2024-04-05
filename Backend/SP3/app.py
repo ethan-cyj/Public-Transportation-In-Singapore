@@ -1,20 +1,13 @@
 from shiny import App, render, ui
-from sklearn.cluster import KMeans
 from shinyswatch import theme
-import numpy as np
 import pandas as pd
 import os
-from selenium import webdriver
 from shinywidgets import output_widget, render_widget
-import plotly.express as px
 import plotly.graph_objs as go
-from htmltools import HTMLDependency
 import geopandas as gpd
 from shapely import Point
 import json 
-from pathlib import Path
 from bs4 import BeautifulSoup
-import geojson
 current_directory = os.getcwd()
 data_directory = os.path.join(current_directory, 'data')
 isochrone_directory = os.path.join(current_directory, 'data\Isochrone_data')
