@@ -38,6 +38,26 @@ def get_path_suitability(client,route):
     except Exception as e:
         return None
     
+def get_path_steepness_and_suitability(client,route):
+    time.sleep(1)
+    try:
+        route_coordinates = polyline.decode(route['route_geometry'])
+        rdp_route_coordinates = rdp(route_coordinates, epsilon=0.0001)
+        rdp_route_coordinates = [[i[1],i[0]] for i in rdp_route_coordinates]
+        response = client.directions(coordinates = rdp_route_coordinates, profile = 'cycling-regular', format = 'geojson', validate = False, instructions = False, elevation = True, extra_info = ['steepness','suitability'])
+
+        steepness = response['features'][0]['properties']['extras']['steepness']['summary']
+        total_length_steepness = sum([i['distance'] for i in steepness])
+        normalized_weighted_steepness = sum([i['distance']*i['value'] for i in steepness])/total_length_steepness
+
+        suitability = response['features'][0]['properties']['extras']['suitability']['summary']
+        total_length_suitability = sum([i['distance'] for i in suitability])
+        normalized_weighted_suitability = sum([i['distance']*i['value'] for i in suitability])/total_length_suitability
+
+        return normalized_weighted_steepness,normalized_weighted_suitability
+    except Exception as e:
+        return None
+    
 #Defining a function that calculates the Euclidean Distance between two points using Haversine Method?
 def haversine(lat1, lon1, lat2, lon2):
     R = 6371.0  # Earth radius in kilometers
