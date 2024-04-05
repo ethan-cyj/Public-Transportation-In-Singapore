@@ -1,16 +1,17 @@
 from shiny import App, render, ui, session, Inputs, Outputs, reactive
 from sklearn.cluster import KMeans
+from shiny import App, render, ui
 from shinyswatch import theme
-import numpy as np
 import pandas as pd
 import os
-from selenium import webdriver
 from shinywidgets import output_widget, render_widget
-import plotly.express as px
 import plotly.graph_objs as go
+import geopandas as gpd
+from shapely import Point
 import json 
 import app_utils as utils
 from itables.shiny import DT
+from bs4 import BeautifulSoup
 
 current_directory = os.getcwd()
 data_directory = os.path.join(current_directory, 'data')
@@ -24,6 +25,7 @@ Centroid_MRT_df = utils.SP2_Prep_Centroid_MRT_Metrics()
 
 #SP3 File Reading
 isochrone_directory = os.path.join(current_directory, 'data\Isochrone_data')
+isochrone_directory = os.path.join(current_directory, 'data/Isochrone_data')
 file_path1 = os.path.join(isochrone_directory, 'mrt_station_colours.csv')
 mrt_df = pd.read_csv(file_path1)
 new_color_map = {
@@ -36,10 +38,10 @@ new_color_map = {
     'grey': '#7c8981',
 }
 mrt_df['Color'] = mrt_df['Color'].map(new_color_map)
-bus_isochrones = pd.read_json(os.path.join(isochrone_directory, 'bus_isochrones.json'), orient='records', lines=True)
-bicycle_isochrones = pd.read_json(os.path.join(isochrone_directory, 'bicycle_isochrones.json'), orient='records', lines=True)
-mrt_isochrones = pd.read_json(os.path.join(isochrone_directory, 'mrt_isochrones.json'), orient='records', lines=True)
-public_transport_isochrones = pd.read_json(os.path.join(isochrone_directory, 'public_isochrones.json'), orient='records', lines=True)
+bus_isochrones = pd.read_json(os.path.join(isochrone_directory, 'bus_isochrones_new.json'), orient='records', lines=True)
+bicycle_isochrones = pd.read_json(os.path.join(isochrone_directory, 'bicycle_isochrones_new.json'), orient='records', lines=True)
+mrt_isochrones = pd.read_json(os.path.join(isochrone_directory, 'mrt_isochrones_new.json'), orient='records', lines=True)
+public_transport_isochrones = pd.read_json(os.path.join(isochrone_directory, 'public_isochrones_new.json'), orient='records', lines=True)
 mrt_names = mrt_df['MRT.Name'].values.tolist()
 coords = mrt_df[['Latitude', 'Longitude']].values.tolist()
 
@@ -91,15 +93,16 @@ app_ui = ui.page_navbar(
                             )
                         )
                     )
-                )
-    ),
+                )),
     ui.nav_panel("Sub-Problem 3: Isochrone Analysis",
                 ui.h2("Distance Travellable from MRT/LRT Stations"),
                 ui.page_sidebar(
-                ui.sidebar(ui.input_select(
+                ui.sidebar(ui.input_selectize(
                     "transport_means",
-                    "Select the means of movement",
-                    ["Bus", "Bicycle", "MRT", "Public_Transport"]
+                    "Select the Means of Movement (Limit to 2 Options)",
+                    ["Bus", "Bicycle", "MRT", "Public Transport"],
+                    multiple=True,
+                    options = dict(maxItems = 2),
                 ),ui.input_selectize(
                     "station",
                     "Select the MRT/LRT station",
@@ -120,7 +123,7 @@ app_ui = ui.page_navbar(
                 ),
     title = "DSE3101 Cycle",
     bg= "#20c997"
-    )
+)
 
 def server(input, output, session):
 
@@ -221,6 +224,15 @@ def server(input, output, session):
                 ''' 
             )
     
+    
+    @output
+    @render.data_frame
+    def path_metric():
+        return render.DataTable(path_metrics,width = "100%",height = "300px")
+
+    
+
+
     #SP3
     def get_isochrone(name, mode, cutoff):
         variable_name = f"{mode}_isochrones"    
@@ -231,18 +243,34 @@ def server(input, output, session):
 
     @render.text
     def txt():
-        # Generate the initial text string
-        initial_text = f"You are trying to find the maximum distance that can be travelled within {input.n_min()} minutes by {input.transport_means()} from the following stations:"
+        if len(input.transport_means()) == 2:
+            transport_means1 = (input.transport_means())[0]
+            transport_means2 = (input.transport_means())[1]
+            # Generate the initial text string
+            initial_text = f"You are trying to find the maximum distance that can be travelled within {input.n_min()} minutes by {transport_means1} and {transport_means2} from the following stations:"
+            
+            # Initialize an empty list to store the lines
+            lines = [initial_text]
+            
+            # Iterate over each station in the tuple
+            for station in input.station():
+                lines.append(f"• {station.strip()}")
         
-        # Initialize an empty list to store the lines
-        lines = [initial_text]
+            # Join the lines with newline characters
+            return '\n'.join(lines)
+        else:
+            # Generate the initial text string
+            initial_text = f"You are trying to find the maximum distance that can be travelled within {input.n_min()} minutes by (Transport Means) from the following stations:"
+            # Initialize an empty list to store the lines
+            lines = [initial_text]
+            # Iterate over each station in the tuple
+            for transport_means in input.transport_means():
+                lines[0] = f"You are trying to find the maximum distance that can be travelled within {input.n_min()} minutes by {input.transport_means()[0]} from the following stations:"
+            for station in input.station():
+                lines.append(f"• {station.strip()}")
         
-        # Iterate over each station in the tuple
-        for station in input.station():
-            lines.append(f"• {station.strip()}")
-    
-        # Join the lines with newline characters
-        return '\n'.join(lines)
+            # Join the lines with newline characters
+            return '\n'.join(lines)
     @render_widget
     def plot():
         fig = go.Figure()
@@ -258,44 +286,53 @@ def server(input, output, session):
                 textposition="bottom center",
                 hoverinfo='text'
             ))
-
+        transportmeans_items = input.transport_means()
         # Fetch and add isochrones for each selected MRT station
         for mrt_name in input.station():
-            # Extracting color and coordinates for the current MRT station
-            station_row = mrt_df[mrt_df['MRT.Name'] == mrt_name].iloc[0]
-            color = station_row["Color"]
-            lat, lon = station_row['Latitude'], station_row['Longitude']
-            
-            # Convert cutoff to minutes, e.g. "15M" to 15
-            cutoff = int(input.n_min())
-            
-            # Fetch the isochrone data
-            isochrone = get_isochrone(name=mrt_name, mode=input.transport_means().lower(), cutoff=cutoff)
-            lon_coords = [coord[0] for coord in isochrone]
-            lat_coords = [coord[1] for coord in isochrone]
+            for transport_means in input.transport_means():
+                transport_ind = transportmeans_items.index(transport_means)
+                if transport_ind == 0:
+                    thickness = 1
+                else:
+                    thickness = 5
+                if transport_means == "Public Transport":
+                    transport_means = "Public_Transport"
+                transport_means = transport_means.lower()
+                # Extracting color and coordinates for the current MRT station
+                station_row = mrt_df[mrt_df['MRT.Name'] == mrt_name].iloc[0]
+                color = station_row["Color"]
+                lat, lon = station_row['Latitude'], station_row['Longitude']
                 
-            # Add isochrone as a trace
-            fig.add_trace(go.Scattermapbox(
-                mode="lines",
-                lon=lon_coords,
-                lat=lat_coords,
-                name=f"Isochrone {lat}, {lon}",
-                line=dict(width=1, color=color),
-                fill="toself",
-                hoverinfo = "none"
-            ))
-            # Add MRT station as a marker
-            fig.add_trace(go.Scattermapbox(
-                mode="markers",
-                lon=[lon],
-                lat=[lat],
-                text=[mrt_name],
-                name=mrt_name,
-                marker=dict(size=10, color=color),
-                textposition="bottom center",
-                hoverinfo='text'
-            ))
-
+                # Convert cutoff to minutes, e.g. "15M" to 15
+                cutoff = int(input.n_min())
+                
+                # Fetch the isochrone data
+                isochrone = get_isochrone(name=mrt_name, mode=transport_means, cutoff=cutoff)
+                lon_coords = [coord[0] for coord in isochrone]
+                lat_coords = [coord[1] for coord in isochrone]
+                    
+                # Add isochrone as a trace
+                fig.add_trace(go.Scattermapbox(
+                    mode="lines",
+                    lon=lon_coords,
+                    lat=lat_coords,
+                    name=f"Isochrone {lat}, {lon}",
+                    line=dict(width=thickness, color=color),
+                    fill="toself",
+                    hoverinfo = "none"
+                ))
+                # Add MRT station as a marker
+                fig.add_trace(go.Scattermapbox(
+                    mode="markers",
+                    lon=[lon],
+                    lat=[lat],
+                    text=[mrt_name],
+                    name=mrt_name,
+                    marker=dict(size=10, color='black'),
+                    textposition="bottom center",
+                    hoverinfo='text'
+                ))
+                
         # Update the layout to match the provided example
         fig.update_layout(
             mapbox_style="carto-positron",
@@ -305,7 +342,28 @@ def server(input, output, session):
             width=1300,
             height=600
         )
-
+        if len(input.transport_means()) == 2:
+            transportmeans1 = input.transport_means()[0]
+            transportmeans2 = input.transport_means()[1]
+            legend_items = {transportmeans1: {'color': 'black', 'width': 1}, transportmeans2: {'color': 'black', 'width': 5}}
+            legend_box = go.layout.Shape(
+                type="rect",
+                x0=0.80,
+                y0=0.8,
+                x1=0.98,
+                y1=0.95,
+                fillcolor="white",
+                opacity=1,
+                line=dict(width=1)
+            )
+            fig.add_shape(legend_box)
+            for i, (label, style) in enumerate(legend_items.items()):
+                fig.add_shape(type='line', x0=0.82, y0=0.9-0.05*i, x1=0.86, y1=0.9-0.05*i,
+                    line=dict(color=style['color'], width=style['width']))
+                fig.add_annotation(x=0.87, y=0.9-0.05*i, xanchor='left', yanchor='middle',
+                                text=label,
+                                showarrow=False, font=dict(size=14, color='black'))
+        
         # Show the figure
         return fig
             
