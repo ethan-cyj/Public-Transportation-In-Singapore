@@ -50,32 +50,28 @@ app_ui = ui.page_navbar(
     ui.nav_panel("Sub-Problem 2: Last Mile Acessibility Index",
                 ui.navset_tab(
                     ui.nav_panel("For Policy Makers",
-                        ui.h2("Rankings by Planning Area using nearest 5 cluster method"),
-                        ui.help_text(
-                                    '''
-                                    What is nearest 5 cluster method? This method involves obtaining the 5 nearest residential clusters to each MRT and obtaining path metrics through LTA OneMap and OpenrouteService. 
-                                    The mean of the metric of interest for each planning area is then calculated by averaging that metric of all such paths within the planning area. This method is used to obtain the rankings by planning area for the metric of interest.
-                                    '''
-                                     ),
                         ui.row(
-                            ui.column(3,ui.input_select("metrics", 
+                            ui.column(7, ui.h2("Rankings by Planning Area using nearest 5 cluster method")),
+                            ui.column(5,ui.input_action_button("button", "Why 5 Clusters?"))
+                        ),
+                        ui.row(),
+                        ui.row(
+                            ui.column(6,ui.input_select("metrics", 
                                                         "Select Metric for Comparison", 
                                                         choices=["Distance","Suitability", "Time Savings", 'Time Savings(Log)',"Weighted Score"],
                                                         selected = "Distance")),
-                            ui.column(3,ui.input_checkbox("exclude",
-                                                          "Exclude Changi & Tuas",
-                                                          value = False)),
                             ui.column(6,ui.card(ui.output_text("Metric_Description")))                              
                         ),
                         ui.row(
-                            ui.layout_columns(
-                                ui.card(
+                            ui.column(1,ui.input_checkbox("exclude",
+                                                          "Exclude Changi & Tuas",
+                                                          value = False)),
+                            ui.column(6, ui.card(
                                     output_widget("chloropeth_map")
-                                ),
-                                ui.card(
+                                )),
+                            ui.column(5,ui.card(
                                     ui.p("placeholder")
-                                )
-                            )
+                                ))
                         )
                     ),
                     ui.nav_panel("For Prospective Cyclists",
@@ -131,6 +127,14 @@ def server(input, output, session):
 
 
     #SP2 Calls
+    @reactive.effect
+    @reactive.event(input.button)
+    async def _():
+        m = ui.modal("This method involves obtaining the 5 nearest residential clusters to each MRT and obtaining path metrics through LTA OneMap and OpenrouteService.\nThe mean of the metric of interest for each planning area is then calculated by averaging that metric of all such paths within the planning area. This method is used to obtain the rankings by planning area for the metric of interest.",
+                title = "What is the Nearest 5-Cluster Method?",
+                easy_close=True,
+                footer = None)
+        ui.modal_show(m)
     @output 
     @render_widget
     def chloropeth_map():
