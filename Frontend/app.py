@@ -13,9 +13,12 @@ import app_utils as utils
 from itables.shiny import DT
 from bs4 import BeautifulSoup
 import polyline
+from pathlib import Path
+from shiny.types import ImgData
 
 current_directory = os.getcwd()
 data_directory = os.path.join(current_directory, 'data')
+www_dir = os.path.join(current_directory, 'Frontend','www')
 
 #SP1 File Reading
 
@@ -138,13 +141,20 @@ app_ui = ui.page_navbar(
                 output_widget("plot")
                 )
                 ),
-    title = "DSE3101 Cycle",
+    title = ui.output_image("image",inline= True),
     bg= "#20c997"
 )
 
 def server(input, output, session):
 
+    @render.image
+    def image():
+        dir = Path(www_dir)
+        img: ImgData = {"src": str(dir / "logo1.png"), "width": "100px"}
+        return img
+    
 
+    #SP1 Calls
 
     #SP2 Calls
     @reactive.effect
