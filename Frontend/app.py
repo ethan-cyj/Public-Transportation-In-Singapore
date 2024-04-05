@@ -13,6 +13,7 @@ import app_utils as utils
 from itables.shiny import DT
 from bs4 import BeautifulSoup
 import polyline
+import plotly.io as pio
 
 current_directory = os.getcwd()
 data_directory = os.path.join(current_directory, 'data')
