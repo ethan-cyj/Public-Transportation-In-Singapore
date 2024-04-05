@@ -38,7 +38,8 @@ def SP2_prep_Chloropeth_Map():
         Planning_Area = basemap[basemap.geometry.contains(point_coordinate)]['Planning_Area'].reset_index(drop=True)
         cluster_ranking.loc[index, 'Planning_Area'] = Planning_Area.values[0]
 
-    cluster_ranking['lg_time_difference'] = cluster_ranking['time_difference'].apply(np.log)
+    #cluster_ranking['lg_time_difference'] = cluster_ranking['time_difference'].apply(np.log)
+    cluster_ranking['lg_time_difference'] = (cluster_ranking['time_difference'] + abs(cluster_ranking['time_difference'].min()) + 1).apply(np.log)
 
     cluster_ranking = cluster_ranking.rename(columns = {'MRT.Name':'MRT Name',
                                                         'time_difference':'Time Savings',
@@ -77,7 +78,7 @@ def SP2_Prep_Centroid_MRT_Metrics():
 def calculate_weighted_score(dataframe, row1, row2, row3, row4):
     numeric_columns = dataframe.select_dtypes(include='number')
     standardized_numeric_columns = (numeric_columns - numeric_columns.mean()) / numeric_columns.std()
-    S = row1 * standardized_numeric_columns["distance"] + row2 * standardized_numeric_columns['suitability'] + row3 * standardized_numeric_columns["time_difference"] + row4 * standardized_numeric_columns["steepness"]
+    S = row1 * -standardized_numeric_columns["distance"] + row2 * standardized_numeric_columns['suitability'] + row3 * standardized_numeric_columns["time_difference"] + row4 * -standardized_numeric_columns["steepness"]
     
     # Normalize S to a 0-100 range
     S_normalized = (S - S.min()) / (S.max() - S.min()) * 100
