@@ -12,6 +12,7 @@ import json
 import app_utils as utils
 from itables.shiny import DT
 from bs4 import BeautifulSoup
+import polyline
 
 current_directory = os.getcwd()
 data_directory = os.path.join(current_directory, 'data')
@@ -89,10 +90,23 @@ app_ui = ui.page_navbar(
                                 ui.input_numeric("w4", "Weight for Steepness", value=0, min=-1, max=0, step=0.1),
                                 ui.input_action_button("weight_sum_btn", "Compute Weights Sum"),
                                 ui.help_text("Note: Weights should sum to 1.0"),
-                                ui.output_text_verbatim("check_sum")
+                                ui.output_text_verbatim("check_sum"),
+                                ui.input_numeric("index_for_plot","Type here the index you wish to plot",0,min = 0,max = 1099,step = 1)
                             ),
                             ui.card(
                                 ui.output_ui("centroid_mrt_metrics")
+                            ),
+                            ui.layout_columns(
+                                ui.card(
+                                    ui.value_box(
+                                        title = "Route Directions",
+                                        value = ui.output_text_verbatim("route_instructions"),
+                                        full_screen = True
+                                    )
+                                ),
+                                ui.card(
+                                    output_widget("plot_path")
+                                )
                             )
                         )
                     )
@@ -254,10 +268,70 @@ def server(input, output, session):
                     footer = None)
         ui.modal_show(m)
     
-    @output
-    @render.data_frame
-    def path_metric():
-        return render.DataTable(path_metrics,width = "100%",height = "300px")
+    @render_widget
+    def plot_path():
+        row = Centroid_MRT_df.iloc[input.index_for_plot()]
+        fig = go.Figure()
+        fig.add_trace(go.Scattermapbox(
+            lat = [row['Latitude_x']],
+            lon = [row['Longitude_x']],
+            mode="markers",
+            name = "Centroid",
+            hoverinfo = "text",
+            text = ("Centroid Name:" + row['centroid_name'])
+            )   
+        )
+        fig.add_trace(go.Scattermapbox(
+            lat = [row['Latitude_y']],
+            lon = [row['Longitude_y']],
+            mode="markers",
+            name = "Transport Station",
+            hoverinfo = "text",
+            text = ("Transport Station:" + row['MRT.Name'])
+            )
+        )
+        
+        try:
+            route_data = row['cycle_route']['route_geometry']
+            route_coordinates = polyline.decode(route_data)
+            lats = [point[0] for point in route_coordinates]
+            lons = [point[1] for point in route_coordinates]
+            fig.add_trace(go.Scattermapbox(
+                mode="lines",
+                lon=lons,
+                lat=lats,
+                marker={'size': 10, 'color': "Blue"},
+                hoverinfo = 'text',
+                text = ("Time difference:" + str(round(row['time_difference'],2)) + " min" + '<br>' +
+                        "Distance:" + str(round(row['distance'],3)) + " km"),
+                showlegend= False,
+            ))
+        except Exception as e:
+            pass
+
+        fig.update_layout(
+            margin={'l':0,'t':0,'b':0,'r':0},
+            mapbox={
+                'style': "open-street-map",
+                'center': {'lat': row['Latitude_x'], 'lon': row['Longitude_x']},
+                'zoom':13
+            }
+        )
+        
+        return fig
+    
+    @render.text
+    def route_instructions():
+        try:
+            row = Centroid_MRT_df.iloc[input.index_for_plot()]
+            route_instructions = row['cycle_route']['route_instructions']
+            text = []
+            for instruction in route_instructions:
+                text.append(instruction[5] + " " + instruction[9])
+            output = '\n'.join(text)
+            return output
+        except Exception as e:
+            return ""
     
     #SP3
     def get_isochrone(name, mode, cutoff):
