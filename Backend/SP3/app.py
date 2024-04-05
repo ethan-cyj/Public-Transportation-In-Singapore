@@ -32,10 +32,10 @@ new_color_map = {
 
 
 mrt_df['Color'] = mrt_df['Color'].map(new_color_map)
-bus_isochrones = pd.read_json(os.path.join(isochrone_directory, 'bus_isochrones.json'), orient='records', lines=True)
-bicycle_isochrones = pd.read_json(os.path.join(isochrone_directory, 'bicycle_isochrones.json'), orient='records', lines=True)
-mrt_isochrones = pd.read_json(os.path.join(isochrone_directory, 'mrt_isochrones.json'), orient='records', lines=True)
-public_transport_isochrones = pd.read_json(os.path.join(isochrone_directory, 'public_isochrones.json'), orient='records', lines=True)
+bus_isochrones = pd.read_json(os.path.join(isochrone_directory, 'bus_isochrones_new.json'), orient='records', lines=True)
+bicycle_isochrones = pd.read_json(os.path.join(isochrone_directory, 'bicycle_isochrones_new.json'), orient='records', lines=True)
+mrt_isochrones = pd.read_json(os.path.join(isochrone_directory, 'mrt_isochrones_new.json'), orient='records', lines=True)
+public_transport_isochrones = pd.read_json(os.path.join(isochrone_directory, 'public_isochrones_new.json'), orient='records', lines=True)
 mrt_names = mrt_df['MRT.Name'].values.tolist()
 coords = mrt_df[['Latitude', 'Longitude']].values.tolist()
 basemap = gpd.read_file(os.path.join(data_directory, 'MasterPlan2019PlanningAreaBoundaryNoSea.geojson'))
