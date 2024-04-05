@@ -4,6 +4,8 @@ import numpy as np
 import pandas as pd
 import os
 from bs4 import BeautifulSoup
+import json
+import yaml
 
 current_directory = os.getcwd()
 data_directory = os.path.join(current_directory, 'data')
@@ -54,7 +56,8 @@ def SP2_Prep_Centroid_MRT_Metrics():
     combined_df = pd.concat([hdb_centroid_pair_df, private_centroid_pair_df], axis=0).reset_index(drop=True)
     combined_df['steepness'] = abs(combined_df['steepness'])
     combined_df['time_difference'] = -combined_df['time_difference'] #Reflect time savings as a positive number
-    output = combined_df[combined_df.columns[[0,1,16,5,6,4,12,13,14,15,17,18]]].copy(deep = True)
+    combined_df['cycle_route'] = combined_df['cycle_route'].apply(lambda x: yaml.load(x, Loader=yaml.SafeLoader))
+    output = combined_df[combined_df.columns[[0,1,16,5,6,4,12,13,14,15,17,18,10]]].copy(deep = True)
 
     basemap = gpd.read_file(os.path.join(data_directory, 'MasterPlan2019PlanningAreaBoundaryNoSea.geojson'))
     basemap['Planning_Area'] = basemap["Description"].apply(lambda x:extract_td_contents(x)[0])
