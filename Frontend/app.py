@@ -12,9 +12,7 @@ import json
 import app_utils as utils
 from itables.shiny import DT
 from bs4 import BeautifulSoup
-import plotly.io as pio
-
-
+import polyline
 
 current_directory = os.getcwd()
 data_directory = os.path.join(current_directory, 'data')
@@ -58,48 +56,60 @@ app_ui = ui.page_navbar(
     ui.nav_panel("Sub-Problem 2: Last Mile Acessibility Index",
                 ui.navset_tab(
                     ui.nav_panel("For Policy Makers",
-                        ui.h2("Rankings by Planning Area using nearest 5 cluster method"),
-                        ui.help_text(
-                                    '''
-                                    What is nearest 5 cluster method? This method involves obtaining the 5 nearest residential clusters to each MRT and obtaining path metrics through LTA OneMap and OpenrouteService. 
-                                    The mean of the metric of interest for each planning area is then calculated by averaging that metric of all such paths within the planning area. This method is used to obtain the rankings by planning area for the metric of interest.
-                                    '''
-                                     ),
-                        ui.row(
-                            ui.column(3,ui.input_select("metrics", 
+                                 ui.page_sidebar(
+                                     ui.sidebar(
+                                        ui.input_select("metrics", 
                                                         "Select Metric for Comparison", 
-                                                        choices=["Distance","Suitability", "Time Savings", 'Time Savings(Log)',"Weighted Score"],
-                                                        selected = "Distance")),
-                            ui.column(3,ui.input_checkbox("exclude",
-                                                          "Exclude Changi & Tuas",
-                                                          value = False)),
-                            ui.column(6,ui.card(ui.output_text("Metric_Description")))                              
-                        ),
-                        ui.row(
-                            ui.layout_columns(
-                                ui.card(
-                                    output_widget("chloropeth_map")
-                                ),
-                                ui.card(
-                                    output_widget("plot_planning_area_rankings")
-                                )
-                            )
-                        )
+                                                        choices=["Distance","Suitability", "Time Savings", 'Time Savings (Log)',"Weighted Score"],
+                                                        selected = "Distance"),
+                                        ui.input_action_button("help_button", "Definition of Metric"),
+                                        ui.input_switch("exclude",
+                                                        "Exclude Changi & Tuas",
+                                                        value = False)
+                                         ),
+                                    ui.row(
+                                    ui.column(7, ui.h2("Rankings by Planning Area using nearest 5 cluster method")),
+                                    ui.column(5,ui.input_action_button("rationale_button", "Why 5 Clusters?"))
+                                    ),
+                                    ui.row(
+                                        ui.column(6, ui.card(
+                                                output_widget("chloropeth_map")
+                                            )),
+                                        ui.column(5,ui.card(
+                                                output_widget("plot_planning_area_rankings")
+                                            ))
+                                    )
+                                 )
+                        
                     ),
                     ui.nav_panel("For Prospective Cyclists",
-                        ui.h2("Table of path metrics for paths of indivual transport stations to residential centroids"),
-                        ui.help_text("Filter,sort, and adjust the weights to calculate the weighted score for paths connecting residential centroids to their nearest MRT/LRT station"),
+                        ui.h2("Table of path metrics for paths of individual transport stations to residential centroids"),
                         ui.page_sidebar(
                             ui.sidebar(
-                                ui.input_numeric("w1", "Weight for Distance", value=0, min=-1, max=0, step=0.1),
+                                ui.input_action_button("instructions_button", "Instructions"),
+                                ui.input_numeric("w1", "Weight for Distance", value=0, min=0, max=1, step=0.1),
                                 ui.input_numeric("w2", "Weight for Suitability", value=0, min=0, max=1, step=0.1),
                                 ui.input_numeric("w3", "Weight for Time Savings", value=0, min=0, max=1, step=0.1),
-                                ui.input_numeric("w4", "Weight for Steepness", value=0, min=-1, max=0, step=0.1),
+                                ui.input_numeric("w4", "Weight for Steepness", value=0, min=0, max=1, step=0.1),
+                                ui.input_action_button("weight_sum_btn", "Compute Weights Sum"),
                                 ui.help_text("Note: Weights should sum to 1.0"),
-                                ui.output_text_verbatim("check_sum")
+                                ui.output_text_verbatim("check_sum"),
+                                ui.input_numeric("index_for_plot","Type here the index you wish to plot",0,min = 0,max = 1099,step = 1)
                             ),
                             ui.card(
                                 ui.output_ui("centroid_mrt_metrics")
+                            ),
+                            ui.layout_columns(
+                                ui.card(
+                                    ui.value_box(
+                                        title = "Route Directions",
+                                        value = ui.output_text_verbatim("route_instructions"),
+                                        full_screen = True
+                                    )
+                                ),
+                                ui.card(
+                                    output_widget("plot_path")
+                                )
                             )
                         )
                     )
@@ -183,35 +193,47 @@ def server(input, output, session):
         fig.update_layout(annotations=annotations)
         return fig
     #SP2 Calls
+    @reactive.effect
+    @reactive.event(input.rationale_button)
+    async def _():
+        m = ui.modal("This method involves obtaining the 5 nearest residential clusters to each MRT and obtaining path metrics through LTA OneMap and OpenrouteService.\nThe mean of the metric of interest for each planning area is then calculated by averaging that metric of all such paths within the planning area. This method is used to obtain the rankings by planning area for the metric of interest.",
+                title = "What is the Nearest 5-Cluster Method?",
+                easy_close=True,
+                footer = None)
+        ui.modal_show(m)
+    
     @output 
     @render_widget
     def chloropeth_map():
-        df = cluster_ranking.groupby('Planning_Area').agg({input.metrics():'mean'}).reset_index()
+        x = input.metrics()
+        if x == "Time Savings (Log)":
+            x = "Time Savings(Log)"
+        df = cluster_ranking.groupby('Planning_Area').agg({x:'mean'}).reset_index()
         basemap_modified = pd.merge(basemap, df, left_on='Planning_Area', right_on='Planning_Area', how='left')
 
         fig = go.Figure()
 
         fig.add_trace(go.Choroplethmapbox(geojson=json.loads(basemap_modified.geometry.to_json()), 
                                    locations=basemap_modified.index,
-                                   z=basemap_modified[input.metrics()],
+                                   z=basemap_modified[x],
                                    name = input.metrics(),
                                    visible = not input.exclude(),
                                    colorscale='RdYlGn',
                                    hoverinfo = 'text',
                                    text = ("Planning Area: " + basemap_modified['Planning_Area'] + '<br>' + 
-                                           "Average " + input.metrics() + " of Paths Within the Area: " + round(basemap_modified[input.metrics()],2).astype(str) )))
+                                           "Average " + input.metrics() + " of Paths Within the Area: " + round(basemap_modified[x],2).astype(str) )))
         
         basemap_modified_exclude = basemap_modified[~basemap_modified['Planning_Area'].isin(['CHANGI','TUAS'])]
 
         fig.add_trace(go.Choroplethmapbox(geojson=json.loads(basemap_modified_exclude.geometry.to_json()), 
                                    locations=basemap_modified_exclude.index,
-                                   z=basemap_modified_exclude[input.metrics()],
+                                   z=basemap_modified_exclude[x],
                                    name = input.metrics() + "2",
                                    colorscale='RdYlGn',
                                    visible= input.exclude(),
                                    hoverinfo = 'text',
                                    text = ("Planning Area: " + basemap_modified_exclude['Planning_Area'] + '<br>' + 
-                                           "Average " + input.metrics() + " of Paths Within the Area: " + round(basemap_modified_exclude[input.metrics()],2).astype(str) )))        
+                                           "Average " + input.metrics() + " of Paths Within the Area: " + round(basemap_modified_exclude[x],2).astype(str) )))        
 
         fig.update_layout(
             margin={'l':0,'t':0,'b':0,'r':0},
@@ -226,58 +248,137 @@ def server(input, output, session):
     @render.ui
     def centroid_mrt_metrics():
         Centroid_MRT_df['weighted_score'] = utils.calculate_weighted_score(Centroid_MRT_df,input.w1(),input.w2(),input.w3(),input.w4())
-        return ui.HTML(DT(Centroid_MRT_df[['weighted_score','centroid_name','MRT.Name','Planning_Area','distance','suitability','time_difference','steepness','Latitude_x','Longitude_x','Latitude_y','Longitude_y']],filters=True, maxBytes = 0))
+        return ui.HTML(DT(Centroid_MRT_df[['weighted_score','centroid_name','MRT.Name','Planning_Area','distance','suitability','time_difference','steepness','Latitude_x','Longitude_x','Latitude_y','Longitude_y']],filters=True, maxBytes = 0,showIndex = True))
+    
+    @reactive.effect
+    @reactive.event(input.instructions_button)
+    async def _():
+        m = ui.modal("Filter, sort, and adjust the weights to calculate the weighted score for paths connecting residential centroids to their nearest MRT/LRT station",
+                title = "Instructions to compute path metrics",
+                easy_close=True,
+                footer = None)
+        ui.modal_show(m)
+    
+    @reactive.calc
+    @reactive.event(input.weight_sum_btn)
+    def weight_sum_btn():
+        input.weight_sum_btn()
+        sum_weights = input.w1() + input.w2() + input.w3() + input.w4()
+        return(sum_weights)
         
+    
     @render.text
     def check_sum():
-        sum_weights = input.w1() + input.w2() + input.w3() + input.w4()
+        x = weight_sum_btn()
         tolerance = 1e-10  # Set a small tolerance
-        if abs(sum_weights - 1.0) < tolerance:
-            return "Acceptable : Weights sum to 1.0" 
+        if abs(x - 1.0) < tolerance:
+            return "Sum of Weights = 1.0" 
         else:
-            return "WARNING : Weights do not sum to 1.0"
-
-    @render.text
-    def Metric_Description():
+            m = ui.modal("""Sum of Weights is not equal to 1. Please try again.""",
+                    title = "Invalid Weights Sum",
+                    easy_close=True,
+                    footer = None)
+            ui.modal_show(m)
+            return "Sum is NOT 1.0"
+    
+    @reactive.effect
+    @reactive.event(input.help_button)    
+    async def _():
         if input.metrics() == "Distance":
-            return (
-            """
-            Distance: The distance from transport stations to residential centroids
-            The aggregate mean of all such distances within the planning area
-            """
-            )
+            m = ui.modal("""This metric describes the distance from transport stations to residential centroids,
+                        and is measured by the aggregate mean of all such distances within the planning area"""
+                        ,
+                    title = "Definition of Metric",
+                    easy_close=True,
+                    footer = None)
         elif input.metrics() == "Suitability":
-            return (
-                '''
-                Suitability: The suitability of paths from transport stations to residential centroids(Obtained from ORS).
-                Judges how suitable the way is based on characteristics of the route and the profile
-                The aggregate mean of all such suitability of paths within the planning area
-                '''
-            )     
+            m = ui.modal("""This metric quantifies the suitability of paths from transport stations to residential centroids (Obtained from ORS) and
+                         is computed based on characteristics of the route and the profile of the area.
+                        It is measured by the aggregate mean of all such suitability of paths within the planning area"""
+                        ,
+                    title = "Definition of Metric",
+                    easy_close=True,
+                    footer = None)
         elif input.metrics() == "Time Savings":
-            return (
-                '''
-                Time Savings: The time savings of paths -(cycle timing - public transport transit timing) from transport stations to residential centroids.
-                The aggregate mean of all such time savings of paths within the planning area
-                '''
-            )
+            m = ui.modal("""This metric quantifies the time savings of paths from transport stations to residential centroids through the formula
+                         Time Savings = Time Taken by Public Transport - Time Taken by Cycling. The value is shows aggregate mean of all such time savings of paths within the planning area"""
+                        ,
+                    title = "Definition of Metric",
+                    easy_close=True,
+                    footer = None)
         else:
-            return (
-                '''
-                Time Savings (Log): The log of the time savings of paths -(cycle timing - public transport transit timing) from transport stations to residential centroids.
-                The aggregate mean of all such time savings of paths within the planning area
-                ''' 
+            m = ui.modal("""This metric is the same as the time savings variable, except that the values are the log values of the time savings.
+            It is computed by the aggregate mean of all such time savings of paths within the planning area""",
+            title = "Definition of Metric",
+                    easy_close=True,
+                    footer = None)
+        ui.modal_show(m)
+    
+    @render_widget
+    def plot_path():
+        row = Centroid_MRT_df.iloc[input.index_for_plot()]
+        fig = go.Figure()
+        fig.add_trace(go.Scattermapbox(
+            lat = [row['Latitude_x']],
+            lon = [row['Longitude_x']],
+            mode="markers",
+            name = "Centroid",
+            hoverinfo = "text",
+            text = ("Centroid Name:" + row['centroid_name'])
+            )   
+        )
+        fig.add_trace(go.Scattermapbox(
+            lat = [row['Latitude_y']],
+            lon = [row['Longitude_y']],
+            mode="markers",
+            name = "Transport Station",
+            hoverinfo = "text",
+            text = ("Transport Station:" + row['MRT.Name'])
             )
-    
-    
-    @output
-    @render.data_frame
-    def path_metric():
-        return render.DataTable(path_metrics,width = "100%",height = "300px")
+        )
+        
+        try:
+            route_data = row['cycle_route']['route_geometry']
+            route_coordinates = polyline.decode(route_data)
+            lats = [point[0] for point in route_coordinates]
+            lons = [point[1] for point in route_coordinates]
+            fig.add_trace(go.Scattermapbox(
+                mode="lines",
+                lon=lons,
+                lat=lats,
+                marker={'size': 10, 'color': "Blue"},
+                hoverinfo = 'text',
+                text = ("Time difference:" + str(round(row['time_difference'],2)) + " min" + '<br>' +
+                        "Distance:" + str(round(row['distance'],3)) + " km"),
+                showlegend= False,
+            ))
+        except Exception as e:
+            pass
 
+        fig.update_layout(
+            margin={'l':0,'t':0,'b':0,'r':0},
+            mapbox={
+                'style': "open-street-map",
+                'center': {'lat': row['Latitude_x'], 'lon': row['Longitude_x']},
+                'zoom':13
+            }
+        )
+        
+        return fig
     
-
-
+    @render.text
+    def route_instructions():
+        try:
+            row = Centroid_MRT_df.iloc[input.index_for_plot()]
+            route_instructions = row['cycle_route']['route_instructions']
+            text = []
+            for instruction in route_instructions:
+                text.append(instruction[5] + " " + instruction[9])
+            output = '\n'.join(text)
+            return output
+        except Exception as e:
+            return ""
+    
     #SP3
     def get_isochrone(name, mode, cutoff):
         variable_name = f"{mode}_isochrones"    
