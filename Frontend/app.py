@@ -84,10 +84,10 @@ app_ui = ui.page_navbar(
                         ui.page_sidebar(
                             ui.sidebar(
                                 ui.input_action_button("instructions_button", "Instructions"),
-                                ui.input_numeric("w1", "Weight for Distance", value=0, min=-1, max=0, step=0.1),
+                                ui.input_numeric("w1", "Weight for Distance", value=0, min=0, max=1, step=0.1),
                                 ui.input_numeric("w2", "Weight for Suitability", value=0, min=0, max=1, step=0.1),
                                 ui.input_numeric("w3", "Weight for Time Savings", value=0, min=0, max=1, step=0.1),
-                                ui.input_numeric("w4", "Weight for Steepness", value=0, min=-1, max=0, step=0.1),
+                                ui.input_numeric("w4", "Weight for Steepness", value=0, min=0, max=1, step=0.1),
                                 ui.input_action_button("weight_sum_btn", "Compute Weights Sum"),
                                 ui.help_text("Note: Weights should sum to 1.0"),
                                 ui.output_text_verbatim("check_sum"),
@@ -202,7 +202,7 @@ def server(input, output, session):
     @render.ui
     def centroid_mrt_metrics():
         Centroid_MRT_df['weighted_score'] = utils.calculate_weighted_score(Centroid_MRT_df,input.w1(),input.w2(),input.w3(),input.w4())
-        return ui.HTML(DT(Centroid_MRT_df[['weighted_score','centroid_name','MRT.Name','Planning_Area','distance','suitability','time_difference','steepness','Latitude_x','Longitude_x','Latitude_y','Longitude_y']],filters=True, maxBytes = 0))
+        return ui.HTML(DT(Centroid_MRT_df[['weighted_score','centroid_name','MRT.Name','Planning_Area','distance','suitability','time_difference','steepness','Latitude_x','Longitude_x','Latitude_y','Longitude_y']],filters=True, maxBytes = 0,showIndex = True))
     
     @reactive.effect
     @reactive.event(input.instructions_button)
