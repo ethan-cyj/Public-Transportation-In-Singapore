@@ -4,6 +4,8 @@ import numpy as np
 import pandas as pd
 import os
 from bs4 import BeautifulSoup
+import json
+import yaml
 
 current_directory = os.getcwd()
 data_directory = os.path.join(current_directory, 'data')
@@ -36,7 +38,8 @@ def SP2_prep_Chloropeth_Map():
         Planning_Area = basemap[basemap.geometry.contains(point_coordinate)]['Planning_Area'].reset_index(drop=True)
         cluster_ranking.loc[index, 'Planning_Area'] = Planning_Area.values[0]
 
-    cluster_ranking['lg_time_difference'] = cluster_ranking['time_difference'].apply(np.log)
+    #cluster_ranking['lg_time_difference'] = cluster_ranking['time_difference'].apply(np.log)
+    cluster_ranking['lg_time_difference'] = (cluster_ranking['time_difference'] + abs(cluster_ranking['time_difference'].min()) + 1).apply(np.log)
 
     cluster_ranking = cluster_ranking.rename(columns = {'MRT.Name':'MRT Name',
                                                         'time_difference':'Time Savings',
@@ -54,7 +57,8 @@ def SP2_Prep_Centroid_MRT_Metrics():
     combined_df = pd.concat([hdb_centroid_pair_df, private_centroid_pair_df], axis=0).reset_index(drop=True)
     combined_df['steepness'] = abs(combined_df['steepness'])
     combined_df['time_difference'] = -combined_df['time_difference'] #Reflect time savings as a positive number
-    output = combined_df[combined_df.columns[[0,1,16,5,6,4,12,13,14,15,17,18]]].copy(deep = True)
+    combined_df['cycle_route'] = combined_df['cycle_route'].apply(lambda x: yaml.load(x, Loader=yaml.SafeLoader))
+    output = combined_df[combined_df.columns[[0,1,16,5,6,4,12,13,14,15,17,18,10]]].copy(deep = True)
 
     basemap = gpd.read_file(os.path.join(data_directory, 'MasterPlan2019PlanningAreaBoundaryNoSea.geojson'))
     basemap['Planning_Area'] = basemap["Description"].apply(lambda x:extract_td_contents(x)[0])
@@ -74,7 +78,7 @@ def SP2_Prep_Centroid_MRT_Metrics():
 def calculate_weighted_score(dataframe, row1, row2, row3, row4):
     numeric_columns = dataframe.select_dtypes(include='number')
     standardized_numeric_columns = (numeric_columns - numeric_columns.mean()) / numeric_columns.std()
-    S = row1 * standardized_numeric_columns["distance"] + row2 * standardized_numeric_columns['suitability'] + row3 * standardized_numeric_columns["time_difference"] + row4 * standardized_numeric_columns["steepness"]
+    S = row1 * -standardized_numeric_columns["distance"] + row2 * standardized_numeric_columns['suitability'] + row3 * standardized_numeric_columns["time_difference"] + row4 * -standardized_numeric_columns["steepness"]
     
     # Normalize S to a 0-100 range
     S_normalized = (S - S.min()) / (S.max() - S.min()) * 100
