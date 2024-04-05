@@ -324,7 +324,7 @@ def server(input, output, session):
                     lat=[lat],
                     text=[mrt_name],
                     name=mrt_name,
-                    marker=dict(size=10, color=color),
+                    marker=dict(size=10, color='black'),
                     textposition="bottom center",
                     hoverinfo='text'
                 ))
