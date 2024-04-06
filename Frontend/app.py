@@ -111,7 +111,6 @@ app_ui = ui.page_navbar(
                                     ui.value_box(
                                         title = "Route Instructions",
                                         value = ui.output_text_verbatim("route_instructions"),
-                                        theme = "bg-orange",
                                         full_screen = True
                                     )
                                 ),
