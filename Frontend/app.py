@@ -14,9 +14,13 @@ from itables.shiny import DT
 from bs4 import BeautifulSoup
 import polyline
 import plotly.io as pio
+from pathlib import Path
+from shiny.types import ImgData
+import numpy as np
 
 current_directory = os.getcwd()
 data_directory = os.path.join(current_directory, 'data')
+www_dir = os.path.join(current_directory, 'Frontend','www')
 
 #Ranking Plot Preparation
 pio.templates.default = "simple_white"
@@ -76,7 +80,7 @@ app_ui = ui.page_navbar(
                                         ui.column(6, ui.card(
                                                 output_widget("chloropeth_map")
                                             )),
-                                        ui.column(5,ui.card(
+                                        ui.column(6,ui.card(
                                                 output_widget("plot_planning_area_rankings")
                                             ))
                                     )
@@ -142,12 +146,23 @@ app_ui = ui.page_navbar(
                 output_widget("plot")
                 )
                 ),
-    title = "DSE3101 Cycle",
+    title = ui.output_image("image",inline= True),
     bg= "#20c997"
 )
 
 
 def server(input, output, session):
+    #General
+    ##Logo
+    @render.image
+    def image():
+        dir = Path(www_dir)
+        img: ImgData = {"src": str(dir / "logo1.png"), "width": "100px"}
+        return img
+
+    #SP1 Calls
+
+    #SP2 Calls
     #Ranking Plot
     @output
     @render_widget
@@ -193,7 +208,7 @@ def server(input, output, session):
 
         fig.update_layout(annotations=annotations)
         return fig
-    #SP2 Calls
+
     @reactive.effect
     @reactive.event(input.rationale_button)
     async def _():
@@ -249,7 +264,19 @@ def server(input, output, session):
     @render.ui
     def centroid_mrt_metrics():
         Centroid_MRT_df['weighted_score'] = utils.calculate_weighted_score(Centroid_MRT_df,input.w1(),input.w2(),input.w3(),input.w4())
-        return ui.HTML(DT(Centroid_MRT_df[['weighted_score','centroid_name','MRT.Name','Planning_Area','distance','suitability','time_difference','steepness','Latitude_x','Longitude_x','Latitude_y','Longitude_y']],filters=True, maxBytes = 0,showIndex = True))
+        output = Centroid_MRT_df.copy(deep =True)
+        output.rename(columns = {'weighted_score':'Weighted Score',
+                                'centroid_name':'Point of Interest',
+                                'MRT.Name':'Station',
+                                'Planning_Area':'Planning Area',
+                                'distance':'Cycling Distance',
+                                'suitability':'Suitability',
+                                'time_difference':'Time Savings',
+                                'steepness':'Steepness'},inplace = True)
+        numeric_cols = output.select_dtypes(include=[np.number]).columns
+        output[numeric_cols] = output[numeric_cols].round(3)
+        with pd.option_context('display.float_format', '{:.3f}'.format):
+            return ui.HTML(DT(output[['Weighted Score', 'Point of Interest', 'Station', 'Planning Area', 'Cycling Distance', 'Suitability', 'Time Savings', 'Steepness']], filters=True, maxBytes=0, showIndex=True))
     
     @reactive.effect
     @reactive.event(input.instructions_button)

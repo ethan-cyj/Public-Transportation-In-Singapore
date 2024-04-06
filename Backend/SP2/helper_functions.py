@@ -56,7 +56,7 @@ def get_path_steepness_and_suitability(client,route):
 
         return normalized_weighted_steepness,normalized_weighted_suitability
     except Exception as e:
-        return None
+        return None,None
     
 #Defining a function that calculates the Euclidean Distance between two points using Haversine Method?
 def haversine(lat1, lon1, lat2, lon2):
