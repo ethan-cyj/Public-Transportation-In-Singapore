@@ -265,18 +265,18 @@ def server(input, output, session):
     def centroid_mrt_metrics():
         Centroid_MRT_df['weighted_score'] = utils.calculate_weighted_score(Centroid_MRT_df,input.w1(),input.w2(),input.w3(),input.w4())
         output = Centroid_MRT_df.copy(deep =True)
-        output.rename(columns = {'weighted_score':'Weighted Score',
+        output.rename(columns = {'weighted_score':'Weighted Score (/100)',
                                 'centroid_name':'Point of Interest',
                                 'MRT.Name':'Station',
                                 'Planning_Area':'Planning Area',
-                                'distance':'Cycling Distance',
-                                'suitability':'Suitability',
-                                'time_difference':'Time Savings',
-                                'steepness':'Steepness'},inplace = True)
+                                'distance':'Cycling Distance (km)',
+                                'suitability':'Suitability (/10)',
+                                'time_difference':'Time Savings (min)',
+                                'steepness':'Steepness (/5)'},inplace = True)
         numeric_cols = output.select_dtypes(include=[np.number]).columns
         output[numeric_cols] = output[numeric_cols].round(3)
         with pd.option_context('display.float_format', '{:.3f}'.format):
-            return ui.HTML(DT(output[['Weighted Score', 'Point of Interest', 'Station', 'Planning Area', 'Cycling Distance', 'Suitability', 'Time Savings', 'Steepness']], filters=True, maxBytes=0, showIndex=True))
+            return ui.HTML(DT(output[['Weighted Score (/100)', 'Point of Interest', 'Station', 'Planning Area', 'Cycling Distance (km)', 'Suitability (/10)', 'Time Savings (min)', 'Steepness (/5)']], filters=True, maxBytes=0, showIndex=True))
     
     @reactive.effect
     @reactive.event(input.instructions_button)
