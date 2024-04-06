@@ -50,16 +50,17 @@ def SP2_prep_Chloropeth_Map():
     return basemap,cluster_ranking
 
 def SP2_Prep_Centroid_MRT_Metrics():
-    hdb_centroid_pair_df = pd.read_csv(os.path.join(data_directory, 'Cluster_data','HDB_Centroid_MRT pairing data.csv'))
-    private_centroid_pair_df = pd.read_csv(os.path.join(data_directory, 'Cluster_data','Private_Centroid_MRT pairing data.csv'))
-    hdb_centroid_pair_df = hdb_centroid_pair_df.drop(hdb_centroid_pair_df.columns[:2], axis=1)
-    private_centroid_pair_df = private_centroid_pair_df.drop(private_centroid_pair_df.columns[:3], axis=1)
-    combined_df = pd.concat([hdb_centroid_pair_df, private_centroid_pair_df], axis=0).reset_index(drop=True)
-    combined_df['steepness'] = abs(combined_df['steepness'])
-    combined_df['time_difference'] = -combined_df['time_difference'] #Reflect time savings as a positive number
-    combined_df['cycle_route'] = combined_df['cycle_route'].apply(lambda x: yaml.load(x, Loader=yaml.SafeLoader))
-    output = combined_df[combined_df.columns[[0,1,16,5,6,4,12,13,14,15,17,18,10]]].copy(deep = True)
+    indiv_combined_centroid_df = pd.read_csv(os.path.join(data_directory, 'Cluster_data','indiv_combined_centroid_data_fixed.csv'),index_col = 0)
+    indiv_combined_centroid_df['steepness'] = abs(indiv_combined_centroid_df['steepness'])
+    indiv_combined_centroid_df['time_difference'] = -indiv_combined_centroid_df['time_difference'] #Reflect time savings as a positive number
 
+    for index,row in indiv_combined_centroid_df.iterrows():
+        try:
+            indiv_combined_centroid_df.at[index,'cycle_route'] = yaml.load(row['cycle_route'], Loader=yaml.FullLoader)
+        except Exception as e:
+            continue
+
+    output = indiv_combined_centroid_df[indiv_combined_centroid_df.columns[[0,1,4,5,6,10,12,13,14,15,16,17,18,19]]].copy(deep = True)
     basemap = gpd.read_file(os.path.join(data_directory, 'MasterPlan2019PlanningAreaBoundaryNoSea.geojson'))
     basemap['Planning_Area'] = basemap["Description"].apply(lambda x:extract_td_contents(x)[0])
     basemap['geometry'] = basemap['geometry'].to_crs("4326")
@@ -70,6 +71,26 @@ def SP2_Prep_Centroid_MRT_Metrics():
         output.loc[index, 'Planning_Area'] = Planning_Area.values[0]
 
     return output
+    # hdb_centroid_pair_df = pd.read_csv(os.path.join(data_directory, 'Cluster_data','HDB_Centroid_MRT pairing data.csv'))
+    # private_centroid_pair_df = pd.read_csv(os.path.join(data_directory, 'Cluster_data','Private_Centroid_MRT pairing data.csv'))
+    # hdb_centroid_pair_df = hdb_centroid_pair_df.drop(hdb_centroid_pair_df.columns[:2], axis=1)
+    # private_centroid_pair_df = private_centroid_pair_df.drop(private_centroid_pair_df.columns[:3], axis=1)
+    # combined_df = pd.concat([hdb_centroid_pair_df, private_centroid_pair_df], axis=0).reset_index(drop=True)
+    # combined_df['steepness'] = abs(combined_df['steepness'])
+    # combined_df['time_difference'] = -combined_df['time_difference'] #Reflect time savings as a positive number
+    # combined_df['cycle_route'] = combined_df['cycle_route'].apply(lambda x: yaml.load(x, Loader=yaml.SafeLoader))
+    # output = combined_df[combined_df.columns[[0,1,16,5,6,4,12,13,14,15,17,18,10]]].copy(deep = True)
+
+    # basemap = gpd.read_file(os.path.join(data_directory, 'MasterPlan2019PlanningAreaBoundaryNoSea.geojson'))
+    # basemap['Planning_Area'] = basemap["Description"].apply(lambda x:extract_td_contents(x)[0])
+    # basemap['geometry'] = basemap['geometry'].to_crs("4326")
+
+    # for index,row in output.iterrows():
+    #     point_coordinate = Point(row['Longitude_x'], row['Latitude_x'])
+    #     Planning_Area = basemap[basemap.geometry.contains(point_coordinate)]['Planning_Area'].reset_index(drop=True)
+    #     output.loc[index, 'Planning_Area'] = Planning_Area.values[0]
+
+    # return output
 
 # def calculate_weighted_score(dataframe,row1,row2,row3,row4):
 #     S = row1 * dataframe["distance"] + row2 * dataframe['suitability'] + row3 * dataframe["time_difference"] + row4 * dataframe["steepness"]
