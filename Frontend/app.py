@@ -55,6 +55,7 @@ mrt_names = mrt_df['MRT.Name'].values.tolist()
 coords = mrt_df[['Latitude', 'Longitude']].values.tolist()
 
 
+
 app_ui = ui.page_navbar(
     theme.minty(),
     ui.nav_panel("Sub-Problem 1: Cycling infrastructure suitability index","a"),
@@ -67,14 +68,14 @@ app_ui = ui.page_navbar(
                                                         "Select Metric for Comparison", 
                                                         choices=["Distance","Suitability", "Time Savings", 'Time Savings (Log)',"Weighted Score"],
                                                         selected = "Distance"),
-                                        ui.input_action_button("help_button", "Definition of Metric"),
+                                        ui.input_action_button("help_button", "Definition of Metric", class_ = "btn-danger"),
                                         ui.input_switch("exclude",
                                                         "Exclude Changi & Tuas",
                                                         value = False)
                                          ),
                                     ui.row(
                                     ui.column(7, ui.h2("Rankings by Planning Area using nearest 5 cluster method")),
-                                    ui.column(5,ui.input_action_button("rationale_button", "Why 5 Clusters?"))
+                                    ui.column(5,ui.input_action_button("rationale_button", "Why 5 Clusters?", class_ = "btn-info"))
                                     ),
                                     ui.row(
                                         ui.column(6, ui.card(
@@ -91,28 +92,42 @@ app_ui = ui.page_navbar(
                         ui.h2("Table of path metrics for paths of individual transport stations to residential centroids"),
                         ui.page_sidebar(
                             ui.sidebar(
-                                ui.input_action_button("instructions_button", "Instructions"),
+                                ui.input_action_button("instructions_button", "Instructions", class_ = "btn-danger"),
                                 ui.input_numeric("w1", "Weight for Distance", value=0, min=0, max=1, step=0.1),
                                 ui.input_numeric("w2", "Weight for Suitability", value=0, min=0, max=1, step=0.1),
                                 ui.input_numeric("w3", "Weight for Time Savings", value=0, min=0, max=1, step=0.1),
                                 ui.input_numeric("w4", "Weight for Steepness", value=0, min=0, max=1, step=0.1),
-                                ui.input_action_button("weight_sum_btn", "Compute Weights Sum"),
                                 ui.help_text("Note: Weights should sum to 1.0"),
+                                ui.input_action_button("weight_sum_btn", "Verify Sum of Weights", class_ = "btn-dark"),
                                 ui.output_text_verbatim("check_sum"),
-                                ui.input_numeric("index_for_plot","Type here the index you wish to plot",0,min = 0,max = 1099,step = 1)
+                                ui.input_action_button("generate_table", "Generate Table", class_ = "btn-success"),
+                                ui.input_numeric("index_for_plot","Type here the index you wish to plot",0,min = 0,max = 1099,step = 1),
+                                ui.input_action_button("plot_route", "Show Route", class_ = "btn-default"),
                             ),
                             ui.card(
                                 ui.output_ui("centroid_mrt_metrics")
                             ),
+                            ui.tags.link(
+                                rel="stylesheet",
+                                href="https://fonts.googleapis.com/css?family=Roboto"
+                            ),
+
+                            ui.tags.style(
+                                "body { font-family: 'Roboto', sans-serif; }"
+                            ),
                             ui.layout_columns(
                                 ui.card(
+                                    ui.card_header("Route Directions",
+                                                   style="color:white; background:#2A2A2A !important;"),
                                     ui.value_box(
-                                        title = "Route Directions",
+                                        title = "",
                                         value = ui.output_text_verbatim("route_instructions"),
                                         full_screen = True
                                     )
                                 ),
                                 ui.card(
+                                    ui.card_header("Suggested Path on Map",
+                                                   style="color:white; background:#2A2A2A !important;"),
                                     output_widget("plot_path")
                                 )
                             )
@@ -260,54 +275,6 @@ def server(input, output, session):
             }
         )
         return fig
-
-    @render.ui
-    def centroid_mrt_metrics():
-        Centroid_MRT_df['weighted_score'] = utils.calculate_weighted_score(Centroid_MRT_df,input.w1(),input.w2(),input.w3(),input.w4())
-        output = Centroid_MRT_df.copy(deep =True)
-        output.rename(columns = {'weighted_score':'Weighted Score (/100)',
-                                'centroid_name':'Point of Interest',
-                                'MRT.Name':'Station',
-                                'Planning_Area':'Planning Area',
-                                'distance':'Cycling Distance (km)',
-                                'suitability':'Suitability (/10)',
-                                'time_difference':'Time Savings (min)',
-                                'steepness':'Steepness (/5)'},inplace = True)
-        numeric_cols = output.select_dtypes(include=[np.number]).columns
-        output[numeric_cols] = output[numeric_cols].round(3)
-        with pd.option_context('display.float_format', '{:.3f}'.format):
-            return ui.HTML(DT(output[['Weighted Score (/100)', 'Point of Interest', 'Station', 'Planning Area', 'Cycling Distance (km)', 'Suitability (/10)', 'Time Savings (min)', 'Steepness (/5)']], filters=True, maxBytes=0, showIndex=True))
-    
-    @reactive.effect
-    @reactive.event(input.instructions_button)
-    async def _():
-        m = ui.modal("Filter, sort, and adjust the weights to calculate the weighted score for paths connecting residential centroids to their nearest MRT/LRT station",
-                title = "Instructions to compute path metrics",
-                easy_close=True,
-                footer = None)
-        ui.modal_show(m)
-    
-    @reactive.calc
-    @reactive.event(input.weight_sum_btn)
-    def weight_sum_btn():
-        input.weight_sum_btn()
-        sum_weights = input.w1() + input.w2() + input.w3() + input.w4()
-        return(sum_weights)
-        
-    
-    @render.text
-    def check_sum():
-        x = weight_sum_btn()
-        tolerance = 1e-10  # Set a small tolerance
-        if abs(x - 1.0) < tolerance:
-            return "Sum of Weights = 1.0" 
-        else:
-            m = ui.modal("""Sum of Weights is not equal to 1. Please try again.""",
-                    title = "Invalid Weights Sum",
-                    easy_close=True,
-                    footer = None)
-            ui.modal_show(m)
-            return "Sum is NOT 1.0"
     
     @reactive.effect
     @reactive.event(input.help_button)    
@@ -341,71 +308,158 @@ def server(input, output, session):
                     easy_close=True,
                     footer = None)
         ui.modal_show(m)
+        
+    @reactive.effect
+    @reactive.event(input.instructions_button)
+    async def _():
+        m = ui.modal("Filter, sort, and adjust the weights to calculate the weighted score for paths connecting residential centroids to their nearest MRT/LRT station",
+                title = "Instructions to compute path metrics",
+                easy_close=True,
+                footer = None)
+        ui.modal_show(m)
+
+    @reactive.Calc
+    @reactive.event(input.weight_sum_btn)
+    def weight_sum_btn():
+        input.weight_sum_btn()
+        sum_weights = input.w1() + input.w2() + input.w3() + input.w4()
+        return(sum_weights)
+    @render.text
+    def check_sum():
+        x = weight_sum_btn()
+        tolerance = 1e-10  # Set a small tolerance
+        if abs(x - 1.0) < tolerance:
+            return "Sum of Weights = 1.0" 
+        else:
+            m = ui.modal("""Sum of Weights is not equal to 1. Please try again.""",
+                    title = "Invalid Weights Sum",
+                    easy_close=True,
+                    footer = None)
+            ui.modal_show(m)
+            return "Sum is NOT 1.0"
+        
+    @render.ui
+    @reactive.event(input.generate_table)
+    def centroid_mrt_metrics():
+        x = weight_sum_btn()
+        tolerance = 1e-10  # Set a small tolerance
+        if abs(x - 1.0) > tolerance:
+            m = ui.modal("Sum of Weights is not equal to 1. Please try again.",
+                    title = "Invalid Weights Sum",
+                    easy_close=True,
+                    footer = None)
+            ui.modal_show(m)
+            return "Input Weights Correctly to View Data Table."
+        else:
+            Centroid_MRT_df['weighted_score'] = utils.calculate_weighted_score(Centroid_MRT_df,input.w1(),input.w2(),input.w3(),input.w4())
+            output = Centroid_MRT_df.copy(deep =True)
+            output.rename(columns = {'weighted_score':'Weighted Score (/100)',
+                                    'centroid_name':'Point of Interest',
+                                    'MRT.Name':'Station',
+                                    'Planning_Area':'Planning Area',
+                                    'distance':'Cycling Distance (km)',
+                                    'suitability':'Suitability (/10)',
+                                    'time_difference':'Time Savings (min)',
+                                    'steepness':'Steepness (/5)'},inplace = True)
+            numeric_cols = output.select_dtypes(include=[np.number]).columns
+            output[numeric_cols] = output[numeric_cols].round(3)
+            with pd.option_context('display.float_format', '{:.3f}'.format):
+                return ui.HTML(DT(output[['Weighted Score (/100)', 'Point of Interest', 'Station', 'Planning Area', 'Cycling Distance (km)', 'Suitability (/10)', 'Time Savings (min)', 'Steepness (/5)']], filters=True, maxBytes=0, showIndex=True))
     
     @render_widget
+    @reactive.event(input.plot_route)
     def plot_path():
-        row = Centroid_MRT_df.iloc[input.index_for_plot()]
-        fig = go.Figure()
-        fig.add_trace(go.Scattermapbox(
-            lat = [row['Latitude_x']],
-            lon = [row['Longitude_x']],
-            mode="markers",
-            name = "Centroid",
-            hoverinfo = "text",
-            text = ("Centroid Name:" + row['centroid_name'])
-            )   
-        )
-        fig.add_trace(go.Scattermapbox(
-            lat = [row['Latitude_y']],
-            lon = [row['Longitude_y']],
-            mode="markers",
-            name = "Transport Station",
-            hoverinfo = "text",
-            text = ("Transport Station:" + row['MRT.Name'])
-            )
-        )
-        
-        try:
-            route_data = row['cycle_route']['route_geometry']
-            route_coordinates = polyline.decode(route_data)
-            lats = [point[0] for point in route_coordinates]
-            lons = [point[1] for point in route_coordinates]
+        if type(input.index_for_plot()) != int:
+            m = ui.modal("Invalid Input",
+                    title = "Input should be an integer between 0 and 1099 (inclusive)",
+                    easy_close=True,
+                    footer = None)
+            ui.modal_show(m)
+            return "Input should be in the Correct Format for Route Path to be Printed"
+        elif input.index_for_plot() < 0 or input.index_for_plot() > 1099:
+            m = ui.modal("Invalid Input",
+                    title = "Input should be an integer between 0 and 1099 (inclusive)",
+                    easy_close=True,
+                    footer = None)
+            ui.modal_show(m)
+            return "Input should be in the Correct Format for Route Path to be Printed"
+        else:
+            row = Centroid_MRT_df.iloc[input.index_for_plot()]
+            fig = go.Figure()
             fig.add_trace(go.Scattermapbox(
-                mode="lines",
-                lon=lons,
-                lat=lats,
-                marker={'size': 10, 'color': "Blue"},
-                hoverinfo = 'text',
-                text = ("Time difference:" + str(round(row['time_difference'],2)) + " min" + '<br>' +
-                        "Distance:" + str(round(row['distance'],3)) + " km"),
-                showlegend= False,
-            ))
-        except Exception as e:
-            pass
+                lat = [row['Latitude_x']],
+                lon = [row['Longitude_x']],
+                mode="markers",
+                name = "Centroid",
+                hoverinfo = "text",
+                text = ("Centroid Name:" + row['centroid_name'])
+                )   
+            )
+            fig.add_trace(go.Scattermapbox(
+                lat = [row['Latitude_y']],
+                lon = [row['Longitude_y']],
+                mode="markers",
+                name = "Transport Station",
+                hoverinfo = "text",
+                text = ("Transport Station:" + row['MRT.Name'])
+                )
+            )
+            try:
+                route_data = row['cycle_route']['route_geometry']
+                route_coordinates = polyline.decode(route_data)
+                lats = [point[0] for point in route_coordinates]
+                lons = [point[1] for point in route_coordinates]
+                fig.add_trace(go.Scattermapbox(
+                    mode="lines",
+                    lon=lons,
+                    lat=lats,
+                    marker={'size': 10, 'color': "Blue"},
+                    hoverinfo = 'text',
+                    text = ("Time difference:" + str(round(row['time_difference'],2)) + " min" + '<br>' +
+                            "Distance:" + str(round(row['distance'],3)) + " km"),
+                    showlegend= False,
+                ))
+            except Exception as e:
+                pass
 
-        fig.update_layout(
-            margin={'l':0,'t':0,'b':0,'r':0},
-            mapbox={
-                'style': "open-street-map",
-                'center': {'lat': row['Latitude_x'], 'lon': row['Longitude_x']},
-                'zoom':13
-            }
-        )
-        
-        return fig
+            fig.update_layout(
+                margin={'l':0,'t':0,'b':0,'r':0},
+                mapbox={
+                    'style': "open-street-map",
+                    'center': {'lat': row['Latitude_x'], 'lon': row['Longitude_x']},
+                    'zoom':13
+                }
+            )
+            return fig
     
     @render.text
+    @reactive.event(input.plot_route)
     def route_instructions():
-        try:
-            row = Centroid_MRT_df.iloc[input.index_for_plot()]
-            route_instructions = row['cycle_route']['route_instructions']
-            text = []
-            for instruction in route_instructions:
-                text.append(instruction[5] + " " + instruction[9])
-            output = '\n'.join(text)
-            return output
-        except Exception as e:
-            return ""
+        if type(input.index_for_plot()) != int:
+            m = ui.modal("Invalid Input",
+                    title = "Input should be an integer between 0 and 1099 (inclusive)",
+                    easy_close=True,
+                    footer = None)
+            ui.modal_show(m)
+            return "Input should be in the Correct Format for Route Instructions to be Printed"
+        elif input.index_for_plot() < 0 or input.index_for_plot() > 1099:
+            m = ui.modal("Invalid Input",
+                    title = "Input should be an integer between 0 and 1099 (inclusive)",
+                    easy_close=True,
+                    footer = None)
+            ui.modal_show(m)
+            return "Input should be in the Correct Format for Route Path to be Printed"
+        else:
+            try:
+                row = Centroid_MRT_df.iloc[input.index_for_plot()]
+                route_instructions = row['cycle_route']['route_instructions']
+                text = []
+                for instruction in route_instructions:
+                    text.append(instruction[5] + " " + instruction[9])
+                output = '\n'.join(text)
+                return output
+            except Exception as e:
+                return ""
     
     #SP3
     def get_isochrone(name, mode, cutoff):
