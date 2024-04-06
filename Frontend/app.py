@@ -16,6 +16,7 @@ import polyline
 import plotly.io as pio
 from pathlib import Path
 from shiny.types import ImgData
+import numpy as np
 
 current_directory = os.getcwd()
 data_directory = os.path.join(current_directory, 'data')
@@ -263,7 +264,19 @@ def server(input, output, session):
     @render.ui
     def centroid_mrt_metrics():
         Centroid_MRT_df['weighted_score'] = utils.calculate_weighted_score(Centroid_MRT_df,input.w1(),input.w2(),input.w3(),input.w4())
-        return ui.HTML(DT(Centroid_MRT_df[['weighted_score','centroid_name','MRT.Name','Planning_Area','distance','suitability','time_difference','steepness','Latitude_x','Longitude_x','Latitude_y','Longitude_y']],filters=True, maxBytes = 0,showIndex = True))
+        output = Centroid_MRT_df.copy(deep =True)
+        output.rename(columns = {'weighted_score':'Weighted Score',
+                                'centroid_name':'Point of Interest',
+                                'MRT.Name':'Station',
+                                'Planning_Area':'Planning Area',
+                                'distance':'Cycling Distance',
+                                'suitability':'Suitability',
+                                'time_difference':'Time Savings',
+                                'steepness':'Steepness'},inplace = True)
+        numeric_cols = output.select_dtypes(include=[np.number]).columns
+        output[numeric_cols] = output[numeric_cols].round(3)
+        with pd.option_context('display.float_format', '{:.3f}'.format):
+            return ui.HTML(DT(output[['Weighted Score', 'Point of Interest', 'Station', 'Planning Area', 'Cycling Distance', 'Suitability', 'Time Savings', 'Steepness']], filters=True, maxBytes=0, showIndex=True))
     
     @reactive.effect
     @reactive.event(input.instructions_button)
