@@ -6,6 +6,9 @@ import os
 from bs4 import BeautifulSoup
 import json
 import yaml
+from pyonemap import OneMap
+from dotenv import load_dotenv
+import requests
 
 current_directory = os.getcwd()
 data_directory = os.path.join(current_directory, 'data')
@@ -104,3 +107,50 @@ def calculate_weighted_score(dataframe, row1, row2, row3, row4):
     S_normalized = (S - S.min()) / (S.max() - S.min()) * 100
     
     return S_normalized
+
+def haversine(lat1, lon1, lat2, lon2):
+    R = 6371.0  # Earth radius in kilometers
+    lat1 = np.radians(lat1)
+    lon1 = np.radians(lon1)
+    lat2 = np.radians(lat2)
+    lon2 = np.radians(lon2)
+    dlat = lat2 - lat1
+    dlon = lon2 - lon1
+    a = np.sin(dlat / 2)**2 + np.cos(lat1) * np.cos(lat2) * np.sin(dlon / 2)**2
+    c = 2 * np.arcsin(np.sqrt(a))
+    distance = R * c
+    return distance
+
+
+def SP2_get_centroid_from_postal_code(address):
+    if address == None or address == "" or type(address) != str:
+        return None
+    load_dotenv()
+    df = pd.read_csv(os.path.join(data_directory, 'Cluster_data','indiv_combined_centroid_data_fixed.csv'),index_col = 0)
+    df = df[["centroid_name","Latitude_x","Longitude_x","MRT.Name"]]
+    #search for average coords of api results
+    one_map_email = os.getenv("ONE_MAP_EMAIL")
+    one_map_password = os.getenv("ONE_MAP_PASSWORD")
+    payload = {
+            "email": one_map_email,
+            "password": one_map_password
+        }
+    api_key = requests.request("POST", "https://www.onemap.gov.sg/api/auth/post/getToken", json=payload)
+    api_key = api_key.json()["access_token"]
+    onemap = OneMap(api_key)
+    location = onemap.search(address)
+    if location['found'] and location['found'] > 0:
+        lat, long =0,0
+        for i in range(location['found']):
+            lat += float(location['results'][i]['LATITUDE'])
+            long += float(location['results'][i]['LONGITUDE'])
+        lat = lat/location['found']
+        long = long/location['found']
+    else:
+        print("No locations found")
+        return None
+    print(lat,long)
+    #find nearest centroid
+    df['euclidean'] = df.apply(lambda x: haversine(lat, long, x['Latitude_x'], x['Longitude_x']), axis=1)
+    df = df[df['euclidean'] == df['euclidean'].min()]
+    return (df["Latitude_x"].values[0], df["Longitude_x"].values[0])
