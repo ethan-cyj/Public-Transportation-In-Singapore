@@ -33,3 +33,7 @@ dmypy.json
 /Backend/otp
 /Backend/OTP
 .DS_Store
+
+
+__pycache__/
+*.pyc

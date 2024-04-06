@@ -140,12 +140,16 @@ def SP2_get_centroid_from_postal_code(address):
     onemap = OneMap(api_key)
     location = onemap.search(address)
     if location['found'] and location['found'] > 0:
-        lat, long =0,0
-        for i in range(location['found']):
-            lat += float(location['results'][i]['LATITUDE'])
-            long += float(location['results'][i]['LONGITUDE'])
-        lat = lat/location['found']
-        long = long/location['found']
+        if location['found'] <=5:
+            lat, long =0,0
+            for i in range(location['found']):
+                lat += float(location['results'][i]['LATITUDE'])
+                long += float(location['results'][i]['LONGITUDE'])
+            lat = lat/location['found']
+            long = long/location['found']
+        else:
+            lat = float(location['results'][0]['LATITUDE'])
+            long = float(location['results'][0]['LONGITUDE'])
     else:
         print("No locations found")
         return None

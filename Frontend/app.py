@@ -17,7 +17,9 @@ import plotly.io as pio
 from pathlib import Path
 from shiny.types import ImgData
 import numpy as np
+from dotenv import load_dotenv
 
+load_dotenv()
 current_directory = os.getcwd()
 data_directory = os.path.join(current_directory, 'data')
 www_dir = os.path.join(current_directory, 'Frontend','www')
