@@ -93,15 +93,15 @@ app_ui = ui.page_navbar(
                         ui.page_sidebar(
                             ui.sidebar(
                                 ui.input_action_button("instructions_button", "Instructions", class_ = "btn-danger"),
-                                ui.input_numeric("w1", "Weight for Distance", value=0, min=0, max=1, step=0.1),
-                                ui.input_numeric("w2", "Weight for Suitability", value=0, min=0, max=1, step=0.1),
-                                ui.input_numeric("w3", "Weight for Time Savings", value=0, min=0, max=1, step=0.1),
-                                ui.input_numeric("w4", "Weight for Steepness", value=0, min=0, max=1, step=0.1),
+                                ui.input_numeric("w1", "Weight for Distance", value=0.25, min=0, max=1, step=0.1),
+                                ui.input_numeric("w2", "Weight for Suitability", value=0.25, min=0, max=1, step=0.1),
+                                ui.input_numeric("w3", "Weight for Time Savings", value=0.25, min=0, max=1, step=0.1),
+                                ui.input_numeric("w4", "Weight for Steepness", value=0.25, min=0, max=1, step=0.1),
                                 ui.help_text("Note: Weights should sum to 1.0"),
                                 ui.input_action_button("weight_sum_btn", "Verify Sum of Weights", class_ = "btn-dark"),
                                 ui.output_text_verbatim("check_sum"),
                                 ui.input_action_button("generate_table", "Generate Table", class_ = "btn-success"),
-                                ui.input_numeric("index_for_plot","Input the row number in the table that you wish to plot",0,min = 0,max = 1099,step = 1),
+                                ui.input_text("user_address","Input an adress to retrieve closest Residential Cluster.",placeholder="eg. Havelock Road"),
                                 ui.input_action_button("plot_route", "Generate Route", class_ = "btn-default"),
                             ),
                             ui.card(
@@ -373,22 +373,21 @@ def server(input, output, session):
     @render_widget
     @reactive.event(input.plot_route)
     def plot_path():
-        if type(input.index_for_plot()) != int:
+        user_input = utils.SP2_get_centroid_from_postal_code(input.user_address())
+        if not user_input:
             m = ui.modal("Invalid Input",
-                    title = "Input should be an integer between 0 and 1099 (inclusive)",
+                    title = "Input returned no results, try a different address!",
                     easy_close=True,
                     footer = None)
             ui.modal_show(m)
-            return "Input should be in the Correct Format for Route Path to be Printed"
-        elif input.index_for_plot() < 0 or input.index_for_plot() > 1099:
-            m = ui.modal("Invalid Input",
-                    title = "Input should be an integer between 0 and 1099 (inclusive)",
-                    easy_close=True,
-                    footer = None)
-            ui.modal_show(m)
-            return "Input should be in the Correct Format for Route Path to be Printed"
+            return "Input returned no results, try a different address!"
         else:
-            row = Centroid_MRT_df.iloc[input.index_for_plot()]
+            print("User Input: ", type(user_input), user_input)
+            
+            latitude = float(user_input[0])
+            longitude = float(user_input[1])
+            row = Centroid_MRT_df[(Centroid_MRT_df['Latitude_x'] == latitude) & (Centroid_MRT_df['Longitude_x'] == longitude)].iloc[0]
+            print("Row: ", row)
             fig = go.Figure()
             fig.add_trace(go.Scattermapbox(
                 lat = [row['Latitude_x']],
@@ -439,23 +438,21 @@ def server(input, output, session):
     @render.text
     @reactive.event(input.plot_route)
     def route_instructions():
-        if type(input.index_for_plot()) != int:
+        user_input = utils.SP2_get_centroid_from_postal_code(input.user_address())
+        if not user_input:
             m = ui.modal("Invalid Input",
-                    title = "Input should be an integer between 0 and 1099 (inclusive)",
+                    title = "Input returned no results, try a different address!",
                     easy_close=True,
                     footer = None)
             ui.modal_show(m)
-            return "Input should be in the Correct Format for Route Instructions to be Printed"
-        elif input.index_for_plot() < 0 or input.index_for_plot() > 1099:
-            m = ui.modal("Invalid Input",
-                    title = "Input should be an integer between 0 and 1099 (inclusive)",
-                    easy_close=True,
-                    footer = None)
-            ui.modal_show(m)
-            return "Input should be in the Correct Format for Route Path to be Printed"
+            return "Input returned no results, try a different address!"
         else:
             try:
-                row = Centroid_MRT_df.iloc[input.index_for_plot()]
+                print("User Input: ", user_input)
+                latitude = float(user_input[0])
+                longitude = float(user_input[1])
+                row = Centroid_MRT_df[(Centroid_MRT_df['Latitude_x'] == latitude) & (Centroid_MRT_df['Longitude_x'] == longitude)].iloc[0]
+                print("Row: ", row)
                 route_instructions = row['cycle_route']['route_instructions']
                 text = []
                 for instruction in route_instructions:
