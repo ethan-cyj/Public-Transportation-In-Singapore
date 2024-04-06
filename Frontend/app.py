@@ -79,7 +79,7 @@ app_ui = ui.page_navbar(
                                         ui.column(6, ui.card(
                                                 output_widget("chloropeth_map")
                                             )),
-                                        ui.column(5,ui.card(
+                                        ui.column(6,ui.card(
                                                 output_widget("plot_planning_area_rankings")
                                             ))
                                     )
