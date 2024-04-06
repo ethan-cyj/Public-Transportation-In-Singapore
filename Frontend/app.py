@@ -103,7 +103,7 @@ app_ui = ui.page_navbar(
                                 ui.input_action_button("weight_sum_btn", "Verify Sum of Weights", class_ = "btn-dark"),
                                 ui.output_text_verbatim("check_sum"),
                                 ui.input_action_button("generate_table", "Generate Table", class_ = "btn-success"),
-                                ui.input_text("user_address","Input an adress to retrieve closest Residential Cluster.",placeholder="eg. Havelock Road"),
+                                ui.input_text("user_address","Input an address to retrieve closest Residential Cluster.",placeholder="eg. Havelock Road"),
                                 ui.input_action_button("plot_route", "Generate Route", class_ = "btn-default"),
                             ),
                             ui.card(
@@ -186,11 +186,14 @@ def server(input, output, session):
     @output
     @render_widget
     def plot_planning_area_rankings():
-        df = cluster_ranking.groupby('Planning_Area').agg({input.metrics():'mean'}).reset_index()
         main_metric = input.metrics()
+        if main_metric == "Time Savings (Log)":
+            main_metric = "Time Savings(Log)"
+        df = cluster_ranking.groupby('Planning_Area').agg({main_metric:'mean'}).reset_index()
+        if input.exclude():
+            df = df[~df['Planning_Area'].isin(['CHANGI','TUAS'])]
         df = df.dropna(subset=[main_metric])
         df = df.sort_values(by=main_metric, ascending=False).reset_index(drop=True)
-
         fig = go.Figure()
         fig.update_layout(title_text='Average ' + main_metric + ' for each Planning Area',
                         yaxis_title=main_metric,
@@ -219,8 +222,9 @@ def server(input, output, session):
                 text=df['Planning_Area'].iloc[i],
                 showarrow=True,
                 arrowhead=1,
-                ax=0,
+                ax=30,
                 ay=-40,
+                textangle=-60,
                 font=dict(color='red' if i < 3 else 'blue', size=12),
                 arrowcolor='red' if i < 3 else 'blue'
             ))
