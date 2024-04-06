@@ -9,6 +9,42 @@ import csv
 import fiona
 fiona.drvsupport.supported_drivers['KML'] = 'rw'
 
+# def get_filter_areas():
+#     region = {}
+#     return result
+
+def get_zoom(poly):
+
+    poly_mapped = shapely.geometry.mapping(poly)
+    poly_coordinates = poly_mapped['coordinates'][0]
+    poly_ = [{'lat': coords[1],'lon': coords[0]} for coords in poly_coordinates]
+    latlons = poly_[:-1]
+    lats = []
+    lons = []
+    for i in latlons:
+        lats.append(i['lat'])
+        lons.append(i['lon'])
+
+    maxlon, minlon = max(lons), min(lons)
+    maxlat, minlat = max(lats), min(lats)
+    center = {
+        'lon': round((maxlon + minlon) / 2, 6),
+        'lat': round((maxlat + minlat) / 2, 6)
+    }
+    lon_zoom_range = np.array([
+    0.0007, 0.0014, 0.003, 0.006, 0.012, 0.024, 0.048, 0.096,
+    0.192, 0.3712, 0.768, 1.536, 3.072, 6.144, 11.8784, 23.7568,
+    47.5136, 98.304, 190.0544, 360.0])
+    margin = 1.2
+    width_to_height=1
+    adjustment = 0.5
+    height = (maxlat - minlat) * margin * width_to_height
+    width = (maxlon - minlon) * margin
+    lon_zoom = np.interp(width , lon_zoom_range, range(20, 0, -1))
+    lat_zoom = np.interp(height, lon_zoom_range, range(20, 0, -1))
+    zoom = round(min(lon_zoom, lat_zoom), 2) - adjustment
+    return zoom
+
 def city_centers(subZoneScore):
     result = {}
     for index, row in subZoneScore.iterrows():
@@ -84,14 +120,14 @@ def prepData():
     bicycleParking.reset_index()
     bicycleParking[["Lat", "Lon"]] = bicycleParking[["Lat", "Lon"]].apply(pd.to_numeric)
 
-    hazards = gpd.read_file(file_path6, driver='KML')
-    hazards['Lon'] = hazards.geometry.apply(lambda p: p.x)
-    hazards['Lat'] = hazards.geometry.apply(lambda p: p.y)
+    chokePoints = gpd.read_file(file_path6, driver='KML')
+    chokePoints['Lon'] = chokePoints.geometry.apply(lambda p: p.x)
+    chokePoints['Lat'] = chokePoints.geometry.apply(lambda p: p.y)
 
-    return subZoneScore, parkConnector_lats, parkConnector_lons, cyclingPath_lats, cyclingPath_lons, bicycleParking, hazards
+    return subZoneScore, parkConnector_lats, parkConnector_lons, cyclingPath_lats, cyclingPath_lons, bicycleParking, chokePoints
 
 
-def createMap(subZoneScore, parkConnector_lats, parkConnector_lons, cyclingPath_lats, cyclingPath_lons, bicycleParking, hazards): #edf, vdf, edfColMap, vdfColMap, eSizeCol = 'Magnitude', vSizeCol = 'Population Within 100km'):
+def createMap(subZoneScore, parkConnector_lats, parkConnector_lons, cyclingPath_lats, cyclingPath_lons, bicycleParking, chokePoints):
     '''
     Function to create the map
     '''
@@ -136,21 +172,22 @@ def createMap(subZoneScore, parkConnector_lats, parkConnector_lons, cyclingPath_
                 legendgroup = 'Lines'
             ),
             go.Scattermapbox(
-                lat=list(hazards["Lat"]),
-                lon=list(hazards['Lon']),
+                lat=list(chokePoints["Lat"]),
+                lon=list(chokePoints['Lon']),
                 mode='markers',
                 marker=go.scattermapbox.Marker(
                     size=5
                 )
-                ,text= hazards["Name"],
+                ,text= chokePoints["Name"],
                 hovertemplate="<b>Name</b>: %{text}<br><b>Lat</b>: %{lat} <b>Lon</b>: %{lon}",
-                name = 'Hazards',
+                name = 'chokePoints',
                 legendgroup = 'Lines'
             )                        
         ]
     )
 
     fig.update_layout(
+        height = 500,
         margin ={'l':0,'t':0,'b':0,'r':0},
         mapbox = {
             'style': "open-street-map",

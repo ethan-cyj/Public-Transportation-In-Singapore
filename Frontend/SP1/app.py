@@ -1,25 +1,19 @@
 from shiny import App, reactive, render, ui
-from shinywidgets import output_widget, register_widget#, render_widget  #render_plotly
+from shinywidgets import output_widget, register_widget
 import plotly.graph_objects as go
 import os
 import json
 import shapely
 import geopandas as gpd
 import pandas as pd
-from myUtils import prepData, createMap, city_centers
+from myUtils import prepData, createMap, city_centers, get_zoom
 import csv
 import numpy as np
 
-# def update_opacity(zone):
-#     new_opacity = [0.2 if z != zone else 1 for z in subZoneScore['zone']]
-#     with map.batch_update():
-#         map.data[0].opacity = new_opacity
 
 subZoneScore, parkConnector_lats, parkConnector_lons, cyclingPath_lats, cyclingPath_lons, bicycleParking, hazards = prepData()
 
 city_centers = city_centers(subZoneScore)
-# city_centers = {'Singapore': dict(lon=103.82904052734375, lat= 1.354625368768736)}
-# city_centers.update(city_centers1)
 area = subZoneScore[['SUBZONE_N','SHAPE_Area']]
 score = subZoneScore[['SUBZONE_N','score']]
 
@@ -35,7 +29,7 @@ app_ui = ui.page_fluid(
             ui.column(3, 
                 ui.input_checkbox_group(
                     "toggle", "Show/Hide data layers", {"Index": "Index Scores", "ParkC": "Park Connector", "CyclingP": "Cycling Path", "BicycleP": "Bicycle Parking", "Hazards": "Hazards"},
-                    selected = ["Index", "ParkC", "CyclingP", "BicycleP", "Hazards"]
+                    selected = ["Index"]#, "ParkC", "CyclingP", "BicycleP", "Hazards"]
                 ),
             ),
             ui.input_select( 
@@ -79,7 +73,7 @@ def server(input, output, session):
         map.data[4].visible = showH
         sel = input.select()
         map.layout.mapbox.center = city_centers[sel]
-        map.layout.mapbox.zoom = np.log(area.loc[area['SUBZONE_N']==sel, 'SHAPE_Area'].values[0])
+        map.layout.mapbox.zoom = get_zoom(subZoneScore.loc[subZoneScore['SUBZONE_N']==sel, 'geometry'].values[0]) # np.log(area.loc[area['SUBZONE_N']==sel, 'SHAPE_Area'].values[0])
 
         @render.text
         def txt():
