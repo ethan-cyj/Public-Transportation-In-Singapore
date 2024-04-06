@@ -92,10 +92,10 @@ app_ui = ui.page_navbar(
                         ui.page_sidebar(
                             ui.sidebar(
                                 ui.input_action_button("instructions_button", "Instructions"),
-                                ui.input_numeric("w1", "Weight for Distance", value=0, min=0, max=1, step=0.1),
-                                ui.input_numeric("w2", "Weight for Suitability", value=0, min=0, max=1, step=0.1),
-                                ui.input_numeric("w3", "Weight for Time Savings", value=0, min=0, max=1, step=0.1),
-                                ui.input_numeric("w4", "Weight for Steepness", value=0, min=0, max=1, step=0.1),
+                                ui.input_numeric("w1", "Weight for Distance", value=0.25, min=0, max=1, step=0.1),
+                                ui.input_numeric("w2", "Weight for Suitability", value=0.25, min=0, max=1, step=0.1),
+                                ui.input_numeric("w3", "Weight for Time Savings", value=0.25, min=0, max=1, step=0.1),
+                                ui.input_numeric("w4", "Weight for Steepness", value=0.25, min=0, max=1, step=0.1),
                                 ui.input_action_button("weight_sum_btn", "Compute Weights Sum"),
                                 ui.help_text("Note: Weights should sum to 1.0"),
                                 ui.output_text_verbatim("check_sum"),
