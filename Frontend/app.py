@@ -13,12 +13,14 @@ import app_utils as utils
 from itables.shiny import DT
 from bs4 import BeautifulSoup
 import polyline
-from pathlib import Path
-from shiny.types import ImgData
+import plotly.io as pio
 
 current_directory = os.getcwd()
 data_directory = os.path.join(current_directory, 'data')
-www_dir = os.path.join(current_directory, 'Frontend','www')
+
+#Ranking Plot Preparation
+pio.templates.default = "simple_white"
+
 
 #SP1 File Reading
 
@@ -28,7 +30,6 @@ basemap,cluster_ranking = utils.SP2_prep_Chloropeth_Map()
 Centroid_MRT_df = utils.SP2_Prep_Centroid_MRT_Metrics()
 
 #SP3 File Reading
-isochrone_directory = os.path.join(current_directory, 'data\Isochrone_data')
 isochrone_directory = os.path.join(current_directory, 'data/Isochrone_data')
 file_path1 = os.path.join(isochrone_directory, 'mrt_station_colours.csv')
 mrt_df = pd.read_csv(file_path1)
@@ -76,7 +77,7 @@ app_ui = ui.page_navbar(
                                                 output_widget("chloropeth_map")
                                             )),
                                         ui.column(5,ui.card(
-                                                ui.p("placeholder")
+                                                output_widget("plot_planning_area_rankings")
                                             ))
                                     )
                                  )
@@ -141,21 +142,57 @@ app_ui = ui.page_navbar(
                 output_widget("plot")
                 )
                 ),
-    title = ui.output_image("image",inline= True),
+    title = "DSE3101 Cycle",
     bg= "#20c997"
 )
 
+
 def server(input, output, session):
+    #Ranking Plot
+    @output
+    @render_widget
+    def plot_planning_area_rankings():
+        df = cluster_ranking.groupby('Planning_Area').agg({input.metrics():'mean'}).reset_index()
+        main_metric = input.metrics()
+        df = df.dropna(subset=[main_metric])
+        df = df.sort_values(by=main_metric, ascending=False).reset_index(drop=True)
 
-    @render.image
-    def image():
-        dir = Path(www_dir)
-        img: ImgData = {"src": str(dir / "logo1.png"), "width": "100px"}
-        return img
-    
+        fig = go.Figure()
+        fig.update_layout(title_text='Average ' + main_metric + ' for each Planning Area',
+                        yaxis_title=main_metric,
+                        hovermode="closest")
 
-    #SP1 Calls
+        colors = ['#7c8981'] * len(df)
+        colors[0:3] = ['#cb2721'] * 3  # Top 3
+        colors[-3:] = ['#0b569d'] * 3  # Bottom 3
 
+        hover_texts = [f"Planning Area: {row['Planning_Area']}<br>{main_metric}: {row[main_metric]:.2f}"
+                    for _, row in df.iterrows()]
+        
+        fig.add_trace(go.Bar(x=df['Planning_Area'], y=df[main_metric],
+                            marker_color=colors,
+                            hoverinfo="text",
+                            text=hover_texts))
+        fig.update_layout(
+            xaxis=dict(showticklabels=False),
+            annotations=[]  # Assuming you are not using annotations here, otherwise add your annotations list
+        )
+        annotations = []
+        for i in list(range(3)) + list(range(len(df) - 3, len(df))):
+            annotations.append(dict(
+                x=df['Planning_Area'].iloc[i],
+                y=df[main_metric].iloc[i],
+                text=df['Planning_Area'].iloc[i],
+                showarrow=True,
+                arrowhead=1,
+                ax=0,
+                ay=-40,
+                font=dict(color='red' if i < 3 else 'blue', size=12),
+                arrowcolor='red' if i < 3 else 'blue'
+            ))
+
+        fig.update_layout(annotations=annotations)
+        return fig
     #SP2 Calls
     @reactive.effect
     @reactive.event(input.rationale_button)
