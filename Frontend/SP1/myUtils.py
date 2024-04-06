@@ -9,12 +9,28 @@ import csv
 import fiona
 fiona.drvsupport.supported_drivers['KML'] = 'rw'
 
-# def get_filter_areas():
-#     region = {}
-#     return result
+def get_filter_areas():
+    region = ['CENTRAL REGION','EAST REGION', 'NORTH REGION', 'NORTH-EAST REGION','WEST REGION']
+    planning_area_central = ['BISHAN', 'BUKIT MERAH', 'BUKIT TIMAH', 'DOWNTOWN CORE', 'GEYLANG', 'KALLANG', 'MARINA EAST', 'MARINA SOUTH',
+        'MARINE PARADE', 'MUSEUM', 'NEWTON', 'NOVENA', 'ORCHARD', 'OUTRAM', 'QUEENSTOWN', 'RIVER VALLEY', 'ROCHOR', 'SINGAPORE RIVER',
+        'SOUTHERN ISLANDS', 'STRAITS VIEW', 'TANGLIN', 'TOA PAYOH']
+    planning_area_east = ['BEDOK', 'CHANGI', 'CHANGI BAY', 'PASIR RIS', 'PAYA LEBAR', 'TAMPINES']
+    planning_area_north = ['CENTRAL WATER CATCHMENT','LIM CHU KANG', 'MANDAI', 'SEMBAWANG', 'SIMPANG', 'SUNGEI KADUT', 'WOODLANDS', 'YISHUN']
+    planning_area_north_east = ['ANG MO KIO', 'HOUGANG', 'NORTH-EASTERN ISLANDS', 'PUNGGOL', 'SELETAR', 'SENGKANG', 'SERANGOON']
+    planning_area_west = ['BOON LAY', 'BUKIT BATOK', 'BUKIT PANJANG', 'CHOA CHU KANG', 'CLEMENTI', 'JURONG EAST', 'JURONG WEST',
+        'PIONEER', 'TENGAH', 'TUAS', 'WESTERN ISLANDS', 'WESTERN WATER CATCHMENT']
+    
+    planning_area = ['ANG MO KIO','BEDOK', 'BISHAN', 'BOON LAY', 'BUKIT BATOK', 'BUKIT MERAH',
+            'BUKIT PANJANG', 'BUKIT TIMAH', 'CENTRAL WATER CATCHMENT', 'CHANGI', 'CHANGI BAY', 'CHOA CHU KANG',
+            'CLEMENTI', 'DOWNTOWN CORE', 'GEYLANG', 'HOUGANG', 'JURONG EAST', 'JURONG WEST', 'KALLANG', 'LIM CHU KANG', 
+            'MANDAI', 'MARINA EAST', 'MARINA SOUTH', 'MARINE PARADE', 'MUSEUM',
+            'NEWTON', 'NORTH-EASTERN ISLANDS', 'NOVENA', 'ORCHARD', 'OUTRAM', 'PASIR RIS', 
+            'PAYA LEBAR', 'PIONEER', 'PUNGGOL', 'QUEENSTOWN', 'RIVER VALLEY', 'ROCHOR', 'SELETAR', 'SEMBAWANG', 'SENGKANG',
+            'SERANGOON', 'SIMPANG', 'SINGAPORE RIVER', 'SOUTHERN ISLANDS', 'STRAITS VIEW', 'SUNGEI KADUT', 'TAMPINES', 
+            'TANGLIN', 'TENGAH', 'TOA PAYOH', 'TUAS', 'WESTERN ISLANDS', 'WESTERN WATER CATCHMENT','WOODLANDS', 'YISHUN']
+    return region,planning_area, planning_area_central, planning_area_east, planning_area_north, planning_area_north_east, planning_area_west
 
 def get_zoom(poly):
-
     poly_mapped = shapely.geometry.mapping(poly)
     poly_coordinates = poly_mapped['coordinates'][0]
     poly_ = [{'lat': coords[1],'lon': coords[0]} for coords in poly_coordinates]
@@ -139,12 +155,14 @@ def createMap(subZoneScore, parkConnector_lats, parkConnector_lons, cyclingPath_
                 colorscale=['rgba(50, 108, 110, 0.5)', 'rgba(32, 88, 95, 1.0)'],
                 z=subZoneScore['score'],
                 text = subZoneScore['DESCRIPTION'],
-                hovertemplate="%{text}<br><br><span style = \"font-size: 1.2em;\"><b>Overall Score: </b>: %{z}</span>"
+                hovertemplate="%{text}<br>",
+                colorbar={"title": 'Deeper color<br>has better<br>infrastructure'}
                 ),
             go.Scattermapbox(
                 lat=parkConnector_lats,
                 lon=parkConnector_lons,
                 mode='lines',
+                fillcolor = 'red',
                 hovertemplate="Park Connector",
                 name = 'Park Connector',
                 legendgroup = 'Lines'
@@ -153,6 +171,7 @@ def createMap(subZoneScore, parkConnector_lats, parkConnector_lons, cyclingPath_
                 lat=cyclingPath_lats,
                 lon=cyclingPath_lons,
                 mode='lines',
+                fillcolor = 'red',
                 hovertemplate="Cycling Path",
                 name = 'Cycling Paths',
                 legendgroup = 'Lines'
@@ -162,8 +181,9 @@ def createMap(subZoneScore, parkConnector_lats, parkConnector_lons, cyclingPath_
                 lon=list(bicycleParking['Lon']),
                 mode='markers',
                 marker=go.scattermapbox.Marker(
-                    size=3,
-                    opacity=0.7
+                    size=5,
+                    opacity=0.5,
+                    color = 'blue',
                 ),
                 text= bicycleParking["Description"],
                 hovertext = bicycleParking["RackCount"],
@@ -175,6 +195,7 @@ def createMap(subZoneScore, parkConnector_lats, parkConnector_lons, cyclingPath_
                 lat=list(chokePoints["Lat"]),
                 lon=list(chokePoints['Lon']),
                 mode='markers',
+                fillcolor = 'purple',
                 marker=go.scattermapbox.Marker(
                     size=5
                 )
