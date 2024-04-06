@@ -51,14 +51,13 @@ def SP2_prep_Chloropeth_Map():
 
 def SP2_Prep_Centroid_MRT_Metrics():
     indiv_combined_centroid_df = pd.read_csv(os.path.join(data_directory, 'Cluster_data','indiv_combined_centroid_data_fixed.csv'),index_col = 0)
+
+    with open(os.path.join(data_directory, 'Cluster_data','indiv_combined_centroid_data_cycle_routes.json'),'r') as f:
+        geojson_list_1 = json.load(f)
+
+    indiv_combined_centroid_df['cycle_route'] = geojson_list_1
     indiv_combined_centroid_df['steepness'] = abs(indiv_combined_centroid_df['steepness'])
     indiv_combined_centroid_df['time_difference'] = -indiv_combined_centroid_df['time_difference'] #Reflect time savings as a positive number
-
-    for index,row in indiv_combined_centroid_df.iterrows():
-        try:
-            indiv_combined_centroid_df.at[index,'cycle_route'] = yaml.load(row['cycle_route'], Loader=yaml.FullLoader)
-        except Exception as e:
-            continue
 
     output = indiv_combined_centroid_df[indiv_combined_centroid_df.columns[[0,1,4,5,6,10,12,13,14,15,16,17,18,19]]].copy(deep = True)
     basemap = gpd.read_file(os.path.join(data_directory, 'MasterPlan2019PlanningAreaBoundaryNoSea.geojson'))
