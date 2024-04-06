@@ -89,7 +89,7 @@ app_ui = ui.page_navbar(
                         
                     ),
                     ui.nav_panel("For Prospective Cyclists",
-                        ui.h2("Table of path metrics for paths of individual transport stations to residential centroids"),
+                        ui.h2("Analysis of Path Metrics from MRT/LRT stations to Residential Centroids"),
                         ui.page_sidebar(
                             ui.sidebar(
                                 ui.input_action_button("instructions_button", "Instructions", class_ = "btn-danger"),
@@ -101,10 +101,12 @@ app_ui = ui.page_navbar(
                                 ui.input_action_button("weight_sum_btn", "Verify Sum of Weights", class_ = "btn-dark"),
                                 ui.output_text_verbatim("check_sum"),
                                 ui.input_action_button("generate_table", "Generate Table", class_ = "btn-success"),
-                                ui.input_numeric("index_for_plot","Type here the index you wish to plot",0,min = 0,max = 1099,step = 1),
-                                ui.input_action_button("plot_route", "Show Route", class_ = "btn-default"),
+                                ui.input_numeric("index_for_plot","Input the row number in the table that you wish to plot",0,min = 0,max = 1099,step = 1),
+                                ui.input_action_button("plot_route", "Generate Route", class_ = "btn-default"),
                             ),
                             ui.card(
+                                ui.card_header("Scores of Points of Interest",
+                                                style="color:white; background:#2A2A2A !important;"),
                                 ui.output_ui("centroid_mrt_metrics")
                             ),
                             ui.tags.link(
@@ -126,7 +128,7 @@ app_ui = ui.page_navbar(
                                     )
                                 ),
                                 ui.card(
-                                    ui.card_header("Suggested Path on Map",
+                                    ui.card_header("Suggested Route on Map",
                                                    style="color:white; background:#2A2A2A !important;"),
                                     output_widget("plot_path")
                                 )
@@ -312,7 +314,9 @@ def server(input, output, session):
     @reactive.effect
     @reactive.event(input.instructions_button)
     async def _():
-        m = ui.modal("Filter, sort, and adjust the weights to calculate the weighted score for paths connecting residential centroids to their nearest MRT/LRT station",
+        m = ui.modal("""Adjust the weights to calculate the weighted score for paths connecting residential centroids to their nearest MRT/LRT station. Following that, press the Verify Sum of Weights button to verify the weight sum, before pressing the Generate Table button to show the scores. 
+                     From the Data Table, plot the suggested route from the map through the inputting of the row number before pressing the Generate Route button.
+                     """,
                 title = "Instructions to compute path metrics",
                 easy_close=True,
                 footer = None)
