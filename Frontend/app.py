@@ -4,10 +4,12 @@ from shiny import App, render, ui
 from shinyswatch import theme
 import pandas as pd
 import os
-from shinywidgets import output_widget, render_widget
+from shinywidgets import output_widget, render_widget, register_widget
 import plotly.graph_objs as go
 import geopandas as gpd
 from shapely import Point
+import shapely
+import csv
 import json 
 import app_utils as utils
 from itables.shiny import DT
@@ -17,7 +19,9 @@ import plotly.io as pio
 from pathlib import Path
 from shiny.types import ImgData
 import numpy as np
+from dotenv import load_dotenv
 
+load_dotenv()
 current_directory = os.getcwd()
 data_directory = os.path.join(current_directory, 'data')
 www_dir = os.path.join(current_directory, 'Frontend','www')
@@ -27,7 +31,11 @@ pio.templates.default = "simple_white"
 
 
 #SP1 File Reading
-
+subZoneScore, parkConnector_lats, parkConnector_lons, cyclingPath_lats, cyclingPath_lons, bicycleParking, hazards = utils.prepData()
+region, planning_area, planning_area_central, planning_area_east, planning_area_north, planning_area_north_east, planning_area_west = utils.get_filter_areas()
+city_centers = utils.city_centers(subZoneScore)
+area = subZoneScore[['SUBZONE_N','SHAPE_Area']]
+score = subZoneScore[['SUBZONE_N','score']]
 
 #SP2 File Reading
 basemap,cluster_ranking = utils.SP2_prep_Chloropeth_Map()
@@ -55,9 +63,46 @@ mrt_names = mrt_df['MRT.Name'].values.tolist()
 coords = mrt_df[['Latitude', 'Longitude']].values.tolist()
 
 
+
 app_ui = ui.page_navbar(
     theme.minty(),
-    ui.nav_panel("Sub-Problem 1: Cycling infrastructure suitability index","a"),
+    ui.nav_panel("Sub-Problem 1: Cycling infrastructure suitability index", 
+                # title and background
+                ui.h4("This visualization answers the question: Which subzone has good/bad cycling infrastructure?"),
+                ui.p("Use the buttons below to customise the plots.", style = "max-width:1000px"),
+                ui.p("Click on the Checkboxes to toggle map overlays.", style = "max-width:1000px"),
+                ui.p("Select the Planning Area of choice then the subzone you want to zoom in on.", style = "max-width:1000px"),
+                # UI
+                ui.panel_well(
+                    ui.row(
+                        ui.column(3, 
+                            ui.input_checkbox_group(
+                                "toggle", "Show/Hide data layers", {"Index": "Index Scores", "ParkC": "Park Connector", "CyclingP": "Cycling Path", "BicycleP": "Bicycle Parking", "Hazards": "Choke Points"},
+                                selected = ["Index"]
+                            )
+                        ),
+                        ui.column(3,
+                            ui.input_select( 
+                                "select_planning_area",
+                                "Select Planning Area",
+                                choices=planning_area
+                            ),
+                            ui.input_select( 
+                                "select_subzone",
+                                "Focus on Subzone",
+                                choices=list(city_centers.keys()),
+                            )
+                        )
+                    )
+                ),
+                ui.panel_well(
+                    ui.row(
+                        ui.output_text_verbatim("txtsp1")
+                    )
+                ),
+                output_widget("map")
+            ),
+
     ui.nav_panel("Sub-Problem 2: Last Mile Acessibility Index",
                 ui.navset_tab(
                     ui.nav_panel("For Policy Makers",
@@ -88,33 +133,46 @@ app_ui = ui.page_navbar(
                         
                     ),
                     ui.nav_panel("For Prospective Cyclists",
-                        ui.h2("Table of path metrics for paths of individual transport stations to residential centroids"),
+                        ui.h2("Analysis of Path Metrics from MRT/LRT stations to Residential Centroids"),
                         ui.page_sidebar(
                             ui.sidebar(
-                                ui.input_action_button("instructions_button", "Instructions", class_ = "btn-danger"),
+                                ui.input_action_button("instructions_button", "Instructions"),
                                 ui.input_numeric("w1", "Weight for Distance", value=0, min=0, max=1, step=0.1),
                                 ui.input_numeric("w2", "Weight for Suitability", value=0, min=0, max=1, step=0.1),
                                 ui.input_numeric("w3", "Weight for Time Savings", value=0, min=0, max=1, step=0.1),
                                 ui.input_numeric("w4", "Weight for Steepness", value=0, min=0, max=1, step=0.1),
+                                ui.input_action_button("weight_sum_btn", "Compute Weights Sum"),
                                 ui.help_text("Note: Weights should sum to 1.0"),
                                 ui.input_action_button("weight_sum_btn", "Verify Sum of Weights", class_ = "btn-dark"),
                                 ui.output_text_verbatim("check_sum"),
-                                ui.input_action_button("generate_table", "Generate Table", class_ = "btn-success"),
-                                ui.input_numeric("index_for_plot","Type here the index you wish to plot",0,min = 0,max = 1099,step = 1),
-                                ui.input_action_button("plot_route", "Show Route", class_ = "btn-default"),
+                                ui.input_numeric("index_for_plot","Type here the index you wish to plot",0,min = 0,max = 1099,step = 1)
                             ),
                             ui.card(
+                                ui.card_header("Scores of Points of Interest",
+                                                style="color:white; background:#2A2A2A !important;"),
                                 ui.output_ui("centroid_mrt_metrics")
+                            ),
+                            ui.tags.link(
+                                rel="stylesheet",
+                                href="https://fonts.googleapis.com/css?family=Roboto"
+                            ),
+
+                            ui.tags.style(
+                                "body { font-family: 'Roboto', sans-serif; }"
                             ),
                             ui.layout_columns(
                                 ui.card(
+                                    ui.card_header("Route Directions",
+                                                   style="color:white; background:#2A2A2A !important;"),
                                     ui.value_box(
-                                        title = "Route Instructions",
+                                        title = "Route Directions",
                                         value = ui.output_text_verbatim("route_instructions"),
                                         full_screen = True
                                     )
                                 ),
                                 ui.card(
+                                    ui.card_header("Suggested Route on Map",
+                                                   style="color:white; background:#2A2A2A !important;"),
                                     output_widget("plot_path")
                                 )
                             )
@@ -163,17 +221,79 @@ def server(input, output, session):
         return img
 
     #SP1 Calls
+    map = utils.createMap(subZoneScore, parkConnector_lats, parkConnector_lons, cyclingPath_lats, cyclingPath_lons, bicycleParking, hazards)
+    register_widget("map", map)
+
+    @reactive.Effect
+    def re():
+        showI = 'Index' in input.toggle()
+        showP = 'ParkC' in input.toggle()
+        showC = 'CyclingP' in input.toggle()
+        showB = 'BicycleP' in input.toggle()
+        showH = 'Hazards' in input.toggle()
+        map.data[0].visible = showI
+        map.data[1].visible = showP
+        map.data[2].visible = showC
+        map.data[3].visible = showB
+        map.data[4].visible = showH
+        sel_planning_area = input.select_planning_area()
+        subzones = subZoneScore.loc[subZoneScore['PLN_AREA_N']== sel_planning_area, 'SUBZONE_N'].unique().tolist()
+        subzones.sort()
+        ui.update_select(
+            "select_subzone",
+            choices=subzones,)
+
+    @reactive.Effect()
+    def react():
+        sel = input.select_subzone()
+        map.layout.mapbox.center = city_centers[sel]
+        map.layout.mapbox.zoom = utils.get_zoom(subZoneScore.loc[subZoneScore['SUBZONE_N']==sel, 'geometry'].values[0])
+
+        @render.text
+        def txtsp1():
+            name = sel.title()
+            overallRank = subZoneScore.loc[subZoneScore['SUBZONE_N']==sel, 'Rank'].values[0]
+            if subZoneScore.loc[subZoneScore['SUBZONE_N']==sel, 'score'].values[0] > 0.4 :
+                goodbad = 'good'
+            elif subZoneScore.loc[subZoneScore['SUBZONE_N']==sel, 'score'].values[0] > 0.3:
+                goodbad = 'average'
+            else: goodbad = 'bad'
+            
+            if subZoneScore.loc[subZoneScore['SUBZONE_N']==sel, 'TotalCyclingPathRank'].values[0] >= 139:
+                lanes = 'has no cycling paths. Needs much improvement.'
+            elif subZoneScore.loc[subZoneScore['SUBZONE_N']==sel, 'TotalCyclingPathRank'].values[0] <= 35:
+                lanes = 'has good amount of cycling paths!'
+            else:
+                lanes = 'has little amount of cycling paths. Could use some improvement.'
+
+            if subZoneScore.loc[subZoneScore['SUBZONE_N']==sel, 'BicycleParkingRank'].values[0] <= 45:
+                bicyclepark = 'has great amount of bicycle parking!'
+            else:
+                bicyclepark = 'has an average amount of bicycle parking.'
+
+            if subZoneScore.loc[subZoneScore['SUBZONE_N']==sel, 'ChokePointNormRank'].values[0] == 1:
+                chokept = 'has no chokepoints!'
+            elif subZoneScore.loc[subZoneScore['SUBZONE_N']==sel, 'ChokePointNormRank'].values[0] >= 300:
+                chokept = 'has a lot of chokepoints as compared to other subzones.'
+            else:
+                chokept = 'has an average amount of chokepoints.'
+
+            return f"{name} is ranked {overallRank} overall.\nThis is considered {goodbad} cycling infrastrucure overall. \n{name} {lanes} \n{name} {bicyclepark} \n{name} {chokept}"
+
 
     #SP2 Calls
     #Ranking Plot
     @output
     @render_widget
     def plot_planning_area_rankings():
-        df = cluster_ranking.groupby('Planning_Area').agg({input.metrics():'mean'}).reset_index()
         main_metric = input.metrics()
+        if main_metric == "Time Savings (Log)":
+            main_metric = "Time Savings(Log)"
+        df = cluster_ranking.groupby('Planning_Area').agg({main_metric:'mean'}).reset_index()
+        if input.exclude():
+            df = df[~df['Planning_Area'].isin(['CHANGI','TUAS'])]
         df = df.dropna(subset=[main_metric])
         df = df.sort_values(by=main_metric, ascending=False).reset_index(drop=True)
-
         fig = go.Figure()
         fig.update_layout(title_text='Average ' + main_metric + ' for each Planning Area',
                         yaxis_title=main_metric,
@@ -202,8 +322,9 @@ def server(input, output, session):
                 text=df['Planning_Area'].iloc[i],
                 showarrow=True,
                 arrowhead=1,
-                ax=0,
+                ax=30,
                 ay=-40,
+                textangle=-60,
                 font=dict(color='red' if i < 3 else 'blue', size=12),
                 arrowcolor='red' if i < 3 else 'blue'
             ))
@@ -295,119 +416,48 @@ def server(input, output, session):
                     easy_close=True,
                     footer = None)
         ui.modal_show(m)
-        
-    @reactive.effect
-    @reactive.event(input.instructions_button)
-    async def _():
-        m = ui.modal("Filter, sort, and adjust the weights to calculate the weighted score for paths connecting residential centroids to their nearest MRT/LRT station",
-                title = "Instructions to compute path metrics",
-                easy_close=True,
-                footer = None)
-        ui.modal_show(m)
-
-    @reactive.Calc
-    @reactive.event(input.weight_sum_btn)
-    def weight_sum_btn():
-        input.weight_sum_btn()
-        sum_weights = input.w1() + input.w2() + input.w3() + input.w4()
-        return(sum_weights)
-    @render.text
-    def check_sum():
-        x = weight_sum_btn()
-        tolerance = 1e-10  # Set a small tolerance
-        if abs(x - 1.0) < tolerance:
-            return "Sum of Weights = 1.0" 
-        else:
-            m = ui.modal("""Sum of Weights is not equal to 1. Please try again.""",
-                    title = "Invalid Weights Sum",
-                    easy_close=True,
-                    footer = None)
-            ui.modal_show(m)
-            return "Sum is NOT 1.0"
-        
-    @render.ui
-    @reactive.event(input.generate_table)
-    def centroid_mrt_metrics():
-        x = weight_sum_btn()
-        tolerance = 1e-10  # Set a small tolerance
-        if abs(x - 1.0) > tolerance:
-            m = ui.modal("Sum of Weights is not equal to 1. Please try again.",
-                    title = "Invalid Weights Sum",
-                    easy_close=True,
-                    footer = None)
-            ui.modal_show(m)
-            return "Input Weights Correctly to View Data Table."
-        else:
-            Centroid_MRT_df['weighted_score'] = utils.calculate_weighted_score(Centroid_MRT_df,input.w1(),input.w2(),input.w3(),input.w4())
-            output = Centroid_MRT_df.copy(deep =True)
-            output.rename(columns = {'weighted_score':'Weighted Score (/100)',
-                                    'centroid_name':'Point of Interest',
-                                    'MRT.Name':'Station',
-                                    'Planning_Area':'Planning Area',
-                                    'distance':'Cycling Distance (km)',
-                                    'suitability':'Suitability (/10)',
-                                    'time_difference':'Time Savings (min)',
-                                    'steepness':'Steepness (/5)'},inplace = True)
-            numeric_cols = output.select_dtypes(include=[np.number]).columns
-            output[numeric_cols] = output[numeric_cols].round(3)
-            with pd.option_context('display.float_format', '{:.3f}'.format):
-                return ui.HTML(DT(output[['Weighted Score (/100)', 'Point of Interest', 'Station', 'Planning Area', 'Cycling Distance (km)', 'Suitability (/10)', 'Time Savings (min)', 'Steepness (/5)']], filters=True, maxBytes=0, showIndex=True))
     
     @render_widget
     @reactive.event(input.plot_route)
     def plot_path():
-        if type(input.index_for_plot()) != int:
-            m = ui.modal("Invalid Input",
-                    title = "Input should be an integer between 0 and 1099 (inclusive)",
-                    easy_close=True,
-                    footer = None)
-            ui.modal_show(m)
-            return "Input should be in the Correct Format for Route Path to be Printed"
-        elif input.index_for_plot() < 0 or input.index_for_plot() > 1099:
-            m = ui.modal("Invalid Input",
-                    title = "Input should be an integer between 0 and 1099 (inclusive)",
-                    easy_close=True,
-                    footer = None)
-            ui.modal_show(m)
-            return "Input should be in the Correct Format for Route Path to be Printed"
-        else:
-            row = Centroid_MRT_df.iloc[input.index_for_plot()]
-            fig = go.Figure()
-            fig.add_trace(go.Scattermapbox(
-                lat = [row['Latitude_x']],
-                lon = [row['Longitude_x']],
-                mode="markers",
-                name = "Centroid",
-                hoverinfo = "text",
-                text = ("Centroid Name:" + row['centroid_name'])
-                )   
+        row = Centroid_MRT_df.iloc[input.index_for_plot()]
+        fig = go.Figure()
+        fig.add_trace(go.Scattermapbox(
+            lat = [row['Latitude_x']],
+            lon = [row['Longitude_x']],
+            mode="markers",
+            name = "Centroid",
+            hoverinfo = "text",
+            text = ("Centroid Name:" + row['centroid_name'])
+            )   
+        )
+        fig.add_trace(go.Scattermapbox(
+            lat = [row['Latitude_y']],
+            lon = [row['Longitude_y']],
+            mode="markers",
+            name = "Transport Station",
+            hoverinfo = "text",
+            text = ("Transport Station:" + row['MRT.Name'])
             )
+        )
+        
+        try:
+            route_data = row['cycle_route']['route_geometry']
+            route_coordinates = polyline.decode(route_data)
+            lats = [point[0] for point in route_coordinates]
+            lons = [point[1] for point in route_coordinates]
             fig.add_trace(go.Scattermapbox(
-                lat = [row['Latitude_y']],
-                lon = [row['Longitude_y']],
-                mode="markers",
-                name = "Transport Station",
-                hoverinfo = "text",
-                text = ("Transport Station:" + row['MRT.Name'])
-                )
-            )
-            try:
-                route_data = row['cycle_route']['route_geometry']
-                route_coordinates = polyline.decode(route_data)
-                lats = [point[0] for point in route_coordinates]
-                lons = [point[1] for point in route_coordinates]
-                fig.add_trace(go.Scattermapbox(
-                    mode="lines",
-                    lon=lons,
-                    lat=lats,
-                    marker={'size': 10, 'color': "Blue"},
-                    hoverinfo = 'text',
-                    text = ("Time difference:" + str(round(row['time_difference'],2)) + " min" + '<br>' +
-                            "Distance:" + str(round(row['distance'],3)) + " km"),
-                    showlegend= False,
-                ))
-            except Exception as e:
-                pass
+                mode="lines",
+                lon=lons,
+                lat=lats,
+                marker={'size': 10, 'color': "Blue"},
+                hoverinfo = 'text',
+                text = ("Time difference:" + str(round(row['time_difference'],2)) + " min" + '<br>' +
+                        "Distance:" + str(round(row['distance'],3)) + " km"),
+                showlegend= False,
+            ))
+        except Exception as e:
+            pass
 
             fig.update_layout(
                 margin={'l':0,'t':0,'b':0,'r':0},
@@ -422,31 +472,16 @@ def server(input, output, session):
     @render.text
     @reactive.event(input.plot_route)
     def route_instructions():
-        if type(input.index_for_plot()) != int:
-            m = ui.modal("Invalid Input",
-                    title = "Input should be an integer between 0 and 1099 (inclusive)",
-                    easy_close=True,
-                    footer = None)
-            ui.modal_show(m)
-            return "Input should be in the Correct Format for Route Instructions to be Printed"
-        elif input.index_for_plot() < 0 or input.index_for_plot() > 1099:
-            m = ui.modal("Invalid Input",
-                    title = "Input should be an integer between 0 and 1099 (inclusive)",
-                    easy_close=True,
-                    footer = None)
-            ui.modal_show(m)
-            return "Input should be in the Correct Format for Route Path to be Printed"
-        else:
-            try:
-                row = Centroid_MRT_df.iloc[input.index_for_plot()]
-                route_instructions = row['cycle_route']['route_instructions']
-                text = []
-                for instruction in route_instructions:
-                    text.append(instruction[5] + " " + instruction[9])
-                output = '\n'.join(text)
-                return output
-            except Exception as e:
-                return ""
+        try:
+            row = Centroid_MRT_df.iloc[input.index_for_plot()]
+            route_instructions = row['cycle_route']['route_instructions']
+            text = []
+            for instruction in route_instructions:
+                text.append(instruction[5] + " " + instruction[9])
+            output = '\n'.join(text)
+            return output
+        except Exception as e:
+            return ""
     
     #SP3
     def get_isochrone(name, mode, cutoff):
