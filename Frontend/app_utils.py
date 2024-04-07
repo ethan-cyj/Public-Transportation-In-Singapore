@@ -164,7 +164,7 @@ def createMap(subZoneScore, parkConnector_lats, parkConnector_lons, cyclingPath_
             go.Choroplethmapbox(
                 geojson=json.loads(subZoneScore.geometry.to_json()),
                 locations=subZoneScore.index,
-                colorscale=['rgba(50, 108, 110, 0.5)', 'rgba(32, 88, 95, 1.0)'],
+                colorscale=['rgba(147, 220, 187, 0.65)', 'rgba(20, 156, 88, 1.0)'],
                 z=subZoneScore['score'],
                 text = subZoneScore['DESCRIPTION'],
                 hovertemplate="%{text}<br>",
