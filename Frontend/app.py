@@ -66,67 +66,72 @@ coords = mrt_df[['Latitude', 'Longitude']].values.tolist()
 
 app_ui = ui.page_navbar(
     theme.minty(),
-    ui.nav_panel("Sub-Problem 1: Cycling infrastructure suitability index", 
+    ui.nav_panel("Sub-Problem 1: Cycling Infrastructure Suitability Index", 
                 # title and background
-                ui.h4("This visualization answers the question: Which subzone has good/bad cycling infrastructure?"),
-                ui.p("Use the buttons below to customise the plots.", style = "max-width:1000px"),
-                ui.p("Click on the Checkboxes to toggle map overlays.", style = "max-width:1000px"),
-                ui.p("Select the Planning Area of choice then the subzone you want to zoom in on.", style = "max-width:1000px"),
-                # UI
-                ui.panel_well(
-                    ui.row(
-                        ui.column(3, 
-                            ui.input_checkbox_group(
-                                "toggle", "Show/Hide data layers", {"Index": "Index Scores", "ParkC": "Park Connector", "CyclingP": "Cycling Path", "BicycleP": "Bicycle Parking", "Hazards": "Choke Points"},
-                                selected = ["Index"]
-                            )
-                        ),
-                        ui.column(3,
-                            ui.input_select( 
-                                "select_planning_area",
-                                "Select Planning Area",
-                                choices=planning_area
-                            ),
-                            ui.input_select( 
-                                "select_subzone",
-                                "Focus on Subzone",
-                                choices=list(city_centers.keys()),
-                            )
-                        )
-                    )
+                ui.row(
+                    ui.column(6,
+                              ui.h2("Which Subzone has Good/Bad Cycling Infrastructure?")),
+                    ui.column(6,
+                              ui.input_action_button("sp1_help_button", "Instructions", class_ = "btn-danger"))
                 ),
-                ui.panel_well(
+                # UI
+                ui.page_sidebar(
+                    ui.sidebar(
+                        ui.input_checkbox_group(
+                            "toggle", "Show/Hide data layers", {"Index": "Index Scores", "ParkC": "Park Connector", "CyclingP": "Cycling Path", "BicycleP": "Bicycle Parking", "Hazards": "Choke Points"},
+                            selected = ["Index"]
+                        ),
+                        ui.input_select( 
+                            "select_planning_area",
+                            "Select Planning Area",
+                            choices=planning_area
+                        ),
+                        ui.input_select( 
+                            "select_subzone",
+                            "Focus on Subzone",
+                            choices=list(city_centers.keys()),
+                        ),
+                        ui.input_action_button("sp1_generate_table", "Zoom In to Location", class_ = "btn-success"),
+                        ),
+                    ui.panel_well(
                     ui.row(
                         ui.output_text_verbatim("txtsp1")
-                    )
+                        )
+                    ),
+                    output_widget("map")
                 ),
-                output_widget("map")
+                
             ),
 
-    ui.nav_panel("Sub-Problem 2: Last Mile Acessibility Index",
+    ui.nav_panel("Sub-Problem 2: Last Mile Accessibility Index",
                 ui.navset_tab(
                     ui.nav_panel("For Policy Makers",
                                  ui.page_sidebar(
                                      ui.sidebar(
+                                        ui.input_action_button("sp2_help_button", "Instructions", class_ = "btn-danger"),
                                         ui.input_select("metrics", 
                                                         "Select Metric for Comparison", 
                                                         choices=["Distance","Suitability", "Time Savings", 'Time Savings (Log)',"Weighted Score"],
                                                         selected = "Distance"),
-                                        ui.input_action_button("help_button", "Definition of Metric", class_ = "btn-danger"),
+                                        ui.input_action_button("help_button", "Definition of Metric", class_ = "btn-dark"),
                                         ui.input_switch("exclude",
                                                         "Exclude Changi & Tuas",
                                                         value = False)
                                          ),
                                     ui.row(
-                                    ui.column(7, ui.h2("Rankings by Planning Area using nearest 5 cluster method")),
+                                    ui.column(7, ui.h2("Rankings by Planning Area using Nearest 5-Cluster Method")),
                                     ui.column(5,ui.input_action_button("rationale_button", "Why 5 Clusters?", class_ = "btn-info"))
                                     ),
                                     ui.row(
                                         ui.column(6, ui.card(
+                                            ui.card_header("Map of Raw Values",
+                                                style="color:white; background:#2A2A2A !important;"),
                                                 output_widget("chloropeth_map")
                                             )),
                                         ui.column(6,ui.card(
-                                                output_widget("plot_planning_area_rankings")
+                                            ui.card_header("Ranking Plot of Districts",
+                                                style="color:white; background:#2A2A2A !important;"),
+                                            output_widget("plot_planning_area_rankings")
                                             ))
                                     )
                                  )
@@ -181,7 +186,12 @@ app_ui = ui.page_navbar(
                     )
                 )),
     ui.nav_panel("Sub-Problem 3: Isochrone Analysis",
-                ui.h2("Distance Travellable from MRT/LRT Stations"),
+                 ui.row(
+                    ui.column(6,
+                              ui.h2("Distance Travellable from MRT/LRT Stations")),
+                    ui.column(6,
+                              ui.input_action_button("sp3_help_button", "Instructions", class_ = "btn-danger"))
+                ),
                 ui.page_sidebar(
                 ui.sidebar(ui.input_selectize(
                     "transport_means",
@@ -191,7 +201,7 @@ app_ui = ui.page_navbar(
                     options = dict(maxItems = 2),
                 ),ui.input_selectize(
                     "station",
-                    "Select the MRT/LRT station",
+                    "Select the MRT/LRT station (Multiple Selection)",
                     mrt_names,
                     multiple=True
                 ),
@@ -201,6 +211,7 @@ app_ui = ui.page_navbar(
                     "Select Maximum Time (in minutes)",
                     min=10, max=60, value=5, step=5
                 ), 
+                ui.input_action_button("sp3_generate_isochrones", "Generate Isochrones", class_ = "btn-success"),
                 bg="#f8f8f8"
                 ),
                 ui.output_text_verbatim("txt"),
@@ -218,13 +229,22 @@ def server(input, output, session):
     @render.image
     def image():
         dir = Path(www_dir)
-        img: ImgData = {"src": str(dir / "logo1.png"), "width": "100px"}
+        img: ImgData = {"src": str(dir / "logo1.png"), "width": "120px"}
         return img
 
     #SP1 Calls
+    @reactive.effect
+    @reactive.event(input.sp1_help_button)
+    async def _():
+        m = ui.modal("Use the buttons below to customise the plots. Following that, click on the Checkboxes to toggle map overlays. Finally, Select the Planning Area of choice then the subzone you want to zoom in on.",
+                title = "Instructions to using Tab",
+                easy_close=True,
+                footer = None)
+        ui.modal_show(m)
     map = utils.createMap(subZoneScore, parkConnector_lats, parkConnector_lons, cyclingPath_lats, cyclingPath_lons, bicycleParking, hazards)
     register_widget("map", map)
-
+    
+    
     @reactive.Effect
     def re():
         showI = 'Index' in input.toggle()
@@ -243,8 +263,9 @@ def server(input, output, session):
         ui.update_select(
             "select_subzone",
             choices=subzones,)
-
+        
     @reactive.Effect()
+    @reactive.event(input.sp1_generate_table)
     def react():
         sel = input.select_subzone()
         map.layout.mapbox.center = city_centers[sel]
@@ -281,7 +302,7 @@ def server(input, output, session):
 
             return f"{name} is ranked {overallRank} overall.\nThis is considered {goodbad} cycling infrastrucure overall. \n{name} {lanes} \n{name} {bicyclepark} \n{name} {chokept}"
 
-
+        
     #SP2 Calls
     #Ranking Plot
     @output
@@ -333,6 +354,15 @@ def server(input, output, session):
         fig.update_layout(annotations=annotations)
         return fig
 
+    @reactive.effect
+    @reactive.event(input.sp2_help_button)
+    async def _():
+        m = ui.modal("Select the metric of Comparison (Distance, Suitability, Time Savings, Time Savings (Log), Weighted Score) to view the differences in scores and rankings between districts in Singapore.",
+                title = "Instructions to using Tab",
+                easy_close=True,
+                footer = None)
+        ui.modal_show(m)
+    
     @reactive.effect
     @reactive.event(input.rationale_button)
     async def _():
@@ -386,17 +416,17 @@ def server(input, output, session):
         return fig
     
     @reactive.effect
-    @reactive.event(input.help_button)    
+    @reactive.event(input.help_button)
     async def _():
         if input.metrics() == "Distance":
-            m = ui.modal("""This metric describes the distance from transport stations to residential centroids,
+            m = ui.modal("""The Distance metric describes the distance from transport stations to residential centroids,
                         and is measured by the aggregate mean of all such distances within the planning area"""
                         ,
                     title = "Definition of Metric",
                     easy_close=True,
                     footer = None)
         elif input.metrics() == "Suitability":
-            m = ui.modal("""This metric quantifies the suitability of paths from transport stations to residential centroids (Obtained from ORS) and
+            m = ui.modal("""The Suitability metric quantifies the suitability of paths from transport stations to residential centroids (Obtained from ORS) and
                          is computed based on characteristics of the route and the profile of the area.
                         It is measured by the aggregate mean of all such suitability of paths within the planning area"""
                         ,
@@ -404,14 +434,21 @@ def server(input, output, session):
                     easy_close=True,
                     footer = None)
         elif input.metrics() == "Time Savings":
-            m = ui.modal("""This metric quantifies the time savings of paths from transport stations to residential centroids through the formula
-                         Time Savings = Time Taken by Public Transport - Time Taken by Cycling. The value is shows aggregate mean of all such time savings of paths within the planning area"""
+            m = ui.modal("""The Time Savings metric quantifies the time savings of paths from transport stations to residential centroids through the formula
+                         Time Savings = Time Taken by Public Transport - Time Taken by Cycling. The value shows aggregate mean of all such time savings of paths within the planning area"""
+                        ,
+                    title = "Definition of Metric",
+                    easy_close=True,
+                    footer = None)
+        elif input.metrics() == "Weighted Score":
+            m = ui.modal("""The Weighted Score metric quantifies overall score of the district based on the other metrics provided. 
+                         The value shows aggregate mean of all such time savings of paths within the planning area"""
                         ,
                     title = "Definition of Metric",
                     easy_close=True,
                     footer = None)
         else:
-            m = ui.modal("""This metric is the same as the time savings variable, except that the values are the log values of the time savings.
+            m = ui.modal("""The Time Savings (Log) metric is the same as the time savings variable, except that the values are the log values of the time savings.
             It is computed by the aggregate mean of all such time savings of paths within the planning area""",
             title = "Definition of Metric",
                     easy_close=True,
@@ -570,6 +607,15 @@ def server(input, output, session):
                 return ""
     
     #SP3
+    @reactive.effect
+    @reactive.event(input.sp3_help_button)
+    async def _():
+        m = ui.modal("Use the buttons in the sidebar to customise the plots. Following that, click on Generate Isochrones button to view your plot!",
+                title = "Instructions to using Tab",
+                easy_close=True,
+                footer = None)
+        ui.modal_show(m)
+    
     def get_isochrone(name, mode, cutoff):
         variable_name = f"{mode}_isochrones"    
         df = globals()[variable_name] 
@@ -607,10 +653,9 @@ def server(input, output, session):
         
             # Join the lines with newline characters
             return '\n'.join(lines)
-    @render_widget
-    def plot():
+    
+    def generateMapsp3():
         fig = go.Figure()
-        
         for _, row in mrt_df.iterrows():
             fig.add_trace(go.Scattermapbox(
                 mode="markers",
@@ -622,86 +667,116 @@ def server(input, output, session):
                 textposition="bottom center",
                 hoverinfo='text'
             ))
-        transportmeans_items = input.transport_means()
-        # Fetch and add isochrones for each selected MRT station
-        for mrt_name in input.station():
-            for transport_means in input.transport_means():
-                transport_ind = transportmeans_items.index(transport_means)
-                if transport_ind == 0:
-                    thickness = 1
-                else:
-                    thickness = 5
-                if transport_means == "Public Transport":
-                    transport_means = "Public_Transport"
-                transport_means = transport_means.lower()
-                # Extracting color and coordinates for the current MRT station
-                station_row = mrt_df[mrt_df['MRT.Name'] == mrt_name].iloc[0]
-                color = station_row["Color"]
-                lat, lon = station_row['Latitude'], station_row['Longitude']
-                
-                # Convert cutoff to minutes, e.g. "15M" to 15
-                cutoff = int(input.n_min())
-                
-                # Fetch the isochrone data
-                isochrone = get_isochrone(name=mrt_name, mode=transport_means, cutoff=cutoff)
-                lon_coords = [coord[0] for coord in isochrone]
-                lat_coords = [coord[1] for coord in isochrone]
-                    
-                # Add isochrone as a trace
-                fig.add_trace(go.Scattermapbox(
-                    mode="lines",
-                    lon=lon_coords,
-                    lat=lat_coords,
-                    name=f"Isochrone {lat}, {lon}",
-                    line=dict(width=thickness, color=color),
-                    fill="toself",
-                    hoverinfo = "none"
-                ))
-                # Add MRT station as a marker
+        fig.update_layout(
+                mapbox_style="carto-positron",
+                mapbox_zoom=12,
+                mapbox_center={"lat": mrt_df[mrt_df["MRT.Name"] == "ESPLANADE MRT STATION"].iloc[0]['Latitude'], "lon": mrt_df[mrt_df["MRT.Name"] == "ESPLANADE MRT STATION"].iloc[0]['Longitude']},
+                showlegend=False,
+                width=1300,
+                height=600
+            )
+        return fig
+    
+    fig = generateMapsp3()
+    register_widget("plot", fig)
+
+    @reactive.Effect()
+    @reactive.event(input.sp3_generate_isochrones)
+    def react():        
+        @render_widget
+        def plot():
+            fig = go.Figure()
+            for _, row in mrt_df.iterrows():
                 fig.add_trace(go.Scattermapbox(
                     mode="markers",
-                    lon=[lon],
-                    lat=[lat],
-                    text=[mrt_name],
-                    name=mrt_name,
-                    marker=dict(size=10, color='black'),
+                    lon=[row['Longitude']],
+                    lat=[row['Latitude']],
+                    text=[row['MRT.Name']],
+                    name=row['MRT.Name'],
+                    marker=dict(size=6, color='grey'),  # Use a neutral color for all stations
                     textposition="bottom center",
                     hoverinfo='text'
                 ))
-                
-        # Update the layout to match the provided example
-        fig.update_layout(
-            mapbox_style="carto-positron",
-            mapbox_zoom=12,
-            mapbox_center={"lat": coords[0][0], "lon": coords[0][1]},
-            showlegend=False,
-            width=1300,
-            height=600
-        )
-        if len(input.transport_means()) == 2:
-            transportmeans1 = input.transport_means()[0]
-            transportmeans2 = input.transport_means()[1]
-            legend_items = {transportmeans1: {'color': 'black', 'width': 1}, transportmeans2: {'color': 'black', 'width': 5}}
-            legend_box = go.layout.Shape(
-                type="rect",
-                x0=0.80,
-                y0=0.8,
-                x1=0.98,
-                y1=0.95,
-                fillcolor="white",
-                opacity=1,
-                line=dict(width=1)
+            transportmeans_items = input.transport_means()
+            # Fetch and add isochrones for each selected MRT station
+            for mrt_name in input.station():
+                for transport_means in input.transport_means():
+                    transport_ind = transportmeans_items.index(transport_means)
+                    if transport_ind == 0:
+                        thickness = 1
+                    else:
+                        thickness = 5
+                    if transport_means == "Public Transport":
+                        transport_means = "Public_Transport"
+                    transport_means = transport_means.lower()
+                    # Extracting color and coordinates for the current MRT station
+                    station_row = mrt_df[mrt_df['MRT.Name'] == mrt_name].iloc[0]
+                    color = station_row["Color"]
+                    lat, lon = station_row['Latitude'], station_row['Longitude']
+                    
+                    # Convert cutoff to minutes, e.g. "15M" to 15
+                    cutoff = int(input.n_min())
+                    
+                    # Fetch the isochrone data
+                    isochrone = get_isochrone(name=mrt_name, mode=transport_means, cutoff=cutoff)
+                    lon_coords = [coord[0] for coord in isochrone]
+                    lat_coords = [coord[1] for coord in isochrone]
+                        
+                    # Add isochrone as a trace
+                    fig.add_trace(go.Scattermapbox(
+                        mode="lines",
+                        lon=lon_coords,
+                        lat=lat_coords,
+                        name=f"Isochrone {lat}, {lon}",
+                        line=dict(width=thickness, color=color),
+                        fill="toself",
+                        hoverinfo = "none"
+                    ))
+                    # Add MRT station as a marker
+                    fig.add_trace(go.Scattermapbox(
+                        mode="markers",
+                        lon=[lon],
+                        lat=[lat],
+                        text=[mrt_name],
+                        name=mrt_name,
+                        marker=dict(size=10, color='black'),
+                        textposition="bottom center",
+                        hoverinfo='text'
+                    ))
+                    
+            # Update the layout to match the provided example
+            fig.update_layout(
+                mapbox_style="carto-positron",
+                mapbox_zoom=12,
+                mapbox_center={"lat": coords[0][0], "lon": coords[0][1]},
+                showlegend=False,
+                width=1300,
+                height=600
             )
-            fig.add_shape(legend_box)
-            for i, (label, style) in enumerate(legend_items.items()):
-                fig.add_shape(type='line', x0=0.82, y0=0.9-0.05*i, x1=0.86, y1=0.9-0.05*i,
-                    line=dict(color=style['color'], width=style['width']))
-                fig.add_annotation(x=0.87, y=0.9-0.05*i, xanchor='left', yanchor='middle',
-                                text=label,
-                                showarrow=False, font=dict(size=14, color='black'))
-        
-        # Show the figure
-        return fig
+            if len(input.transport_means()) == 2:
+                transportmeans1 = input.transport_means()[0]
+                transportmeans2 = input.transport_means()[1]
+                legend_items = {transportmeans1: {'color': 'black', 'width': 1}, transportmeans2: {'color': 'black', 'width': 5}}
+                legend_box = go.layout.Shape(
+                    type="rect",
+                    x0=0.80,
+                    y0=0.8,
+                    x1=0.98,
+                    y1=0.95,
+                    fillcolor="white",
+                    opacity=1,
+                    line=dict(width=1)
+                )
+                fig.add_shape(legend_box)
+                for i, (label, style) in enumerate(legend_items.items()):
+                    fig.add_shape(type='line', x0=0.82, y0=0.9-0.05*i, x1=0.86, y1=0.9-0.05*i,
+                        line=dict(color=style['color'], width=style['width']))
+                    fig.add_annotation(x=0.87, y=0.9-0.05*i, xanchor='left', yanchor='middle',
+                                    text=label,
+                                    showarrow=False, font=dict(size=14, color='black'))
+            
+            # Show the figure
+            return fig
             
 
 app = App(app_ui, server)
