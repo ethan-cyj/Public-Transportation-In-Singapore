@@ -4,10 +4,12 @@ from shiny import App, render, ui
 from shinyswatch import theme
 import pandas as pd
 import os
-from shinywidgets import output_widget, render_widget
+from shinywidgets import output_widget, render_widget, register_widget
 import plotly.graph_objs as go
 import geopandas as gpd
 from shapely import Point
+import shapely
+import csv
 import json 
 import app_utils as utils
 from itables.shiny import DT
@@ -29,7 +31,11 @@ pio.templates.default = "simple_white"
 
 
 #SP1 File Reading
-
+subZoneScore, parkConnector_lats, parkConnector_lons, cyclingPath_lats, cyclingPath_lons, bicycleParking, hazards = utils.prepData()
+region, planning_area, planning_area_central, planning_area_east, planning_area_north, planning_area_north_east, planning_area_west = utils.get_filter_areas()
+city_centers = utils.city_centers(subZoneScore)
+area = subZoneScore[['SUBZONE_N','SHAPE_Area']]
+score = subZoneScore[['SUBZONE_N','score']]
 
 #SP2 File Reading
 basemap,cluster_ranking = utils.SP2_prep_Chloropeth_Map()
@@ -60,7 +66,43 @@ coords = mrt_df[['Latitude', 'Longitude']].values.tolist()
 
 app_ui = ui.page_navbar(
     theme.minty(),
-    ui.nav_panel("Sub-Problem 1: Cycling infrastructure suitability index","a"),
+    ui.nav_panel("Sub-Problem 1: Cycling infrastructure suitability index", 
+                # title and background
+                ui.h4("This visualization answers the question: Which subzone has good/bad cycling infrastructure?"),
+                ui.p("Use the buttons below to customise the plots.", style = "max-width:1000px"),
+                ui.p("Click on the Checkboxes to toggle map overlays.", style = "max-width:1000px"),
+                ui.p("Select the Planning Area of choice then the subzone you want to zoom in on.", style = "max-width:1000px"),
+                # UI
+                ui.panel_well(
+                    ui.row(
+                        ui.column(3, 
+                            ui.input_checkbox_group(
+                                "toggle", "Show/Hide data layers", {"Index": "Index Scores", "ParkC": "Park Connector", "CyclingP": "Cycling Path", "BicycleP": "Bicycle Parking", "Hazards": "Choke Points"},
+                                selected = ["Index"]
+                            )
+                        ),
+                        ui.column(3,
+                            ui.input_select( 
+                                "select_planning_area",
+                                "Select Planning Area",
+                                choices=planning_area
+                            ),
+                            ui.input_select( 
+                                "select_subzone",
+                                "Focus on Subzone",
+                                choices=list(city_centers.keys()),
+                            )
+                        )
+                    )
+                ),
+                ui.panel_well(
+                    ui.row(
+                        ui.output_text_verbatim("txtsp1")
+                    )
+                ),
+                output_widget("map")
+            ),
+
     ui.nav_panel("Sub-Problem 2: Last Mile Acessibility Index",
                 ui.navset_tab(
                     ui.nav_panel("For Policy Makers",
@@ -180,6 +222,65 @@ def server(input, output, session):
         return img
 
     #SP1 Calls
+    map = utils.createMap(subZoneScore, parkConnector_lats, parkConnector_lons, cyclingPath_lats, cyclingPath_lons, bicycleParking, hazards)
+    register_widget("map", map)
+
+    @reactive.Effect
+    def re():
+        showI = 'Index' in input.toggle()
+        showP = 'ParkC' in input.toggle()
+        showC = 'CyclingP' in input.toggle()
+        showB = 'BicycleP' in input.toggle()
+        showH = 'Hazards' in input.toggle()
+        map.data[0].visible = showI
+        map.data[1].visible = showP
+        map.data[2].visible = showC
+        map.data[3].visible = showB
+        map.data[4].visible = showH
+        sel_planning_area = input.select_planning_area()
+        subzones = subZoneScore.loc[subZoneScore['PLN_AREA_N']== sel_planning_area, 'SUBZONE_N'].unique().tolist()
+        subzones.sort()
+        ui.update_select(
+            "select_subzone",
+            choices=subzones,)
+
+    @reactive.Effect()
+    def react():
+        sel = input.select_subzone()
+        map.layout.mapbox.center = city_centers[sel]
+        map.layout.mapbox.zoom = utils.get_zoom(subZoneScore.loc[subZoneScore['SUBZONE_N']==sel, 'geometry'].values[0])
+
+        @render.text
+        def txtsp1():
+            name = sel.title()
+            overallRank = subZoneScore.loc[subZoneScore['SUBZONE_N']==sel, 'Rank'].values[0]
+            if subZoneScore.loc[subZoneScore['SUBZONE_N']==sel, 'score'].values[0] > 0.4 :
+                goodbad = 'good'
+            elif subZoneScore.loc[subZoneScore['SUBZONE_N']==sel, 'score'].values[0] > 0.3:
+                goodbad = 'average'
+            else: goodbad = 'bad'
+            
+            if subZoneScore.loc[subZoneScore['SUBZONE_N']==sel, 'TotalCyclingPathRank'].values[0] >= 139:
+                lanes = 'has no cycling paths. Needs much improvement.'
+            elif subZoneScore.loc[subZoneScore['SUBZONE_N']==sel, 'TotalCyclingPathRank'].values[0] <= 35:
+                lanes = 'has good amount of cycling paths!'
+            else:
+                lanes = 'has little amount of cycling paths. Could use some improvement.'
+
+            if subZoneScore.loc[subZoneScore['SUBZONE_N']==sel, 'BicycleParkingRank'].values[0] <= 45:
+                bicyclepark = 'has great amount of bicycle parking!'
+            else:
+                bicyclepark = 'has an average amount of bicycle parking.'
+
+            if subZoneScore.loc[subZoneScore['SUBZONE_N']==sel, 'ChokePointNormRank'].values[0] == 1:
+                chokept = 'has no chokepoints!'
+            elif subZoneScore.loc[subZoneScore['SUBZONE_N']==sel, 'ChokePointNormRank'].values[0] >= 300:
+                chokept = 'has a lot of chokepoints as compared to other subzones.'
+            else:
+                chokept = 'has an average amount of chokepoints.'
+
+            return f"{name} is ranked {overallRank} overall.\nThis is considered {goodbad} cycling infrastrucure overall. \n{name} {lanes} \n{name} {bicyclepark} \n{name} {chokept}"
+
 
     #SP2 Calls
     #Ranking Plot
