@@ -418,14 +418,14 @@ def server(input, output, session):
     @reactive.event(input.help_button)
     async def _():
         if input.metrics() == "Distance":
-            m = ui.modal("""The Distance metric describes the distance from transport stations to residential centroids,
+            m = ui.modal("""The Distance metric describes the distance from transport stations to residential centroids (in km),
                         and is measured by the aggregate mean of all such distances within the planning area"""
                         ,
                     title = "Definition of Metric",
                     easy_close=True,
                     footer = None)
         elif input.metrics() == "Suitability":
-            m = ui.modal("""The Suitability metric quantifies the suitability of paths from transport stations to residential centroids (Obtained from ORS) and
+            m = ui.modal("""The Suitability metric quantifies the suitability of paths (out of 10) from transport stations to residential centroids (Obtained from ORS) and
                          is computed based on characteristics of the route and the profile of the area.
                         It is measured by the aggregate mean of all such suitability of paths within the planning area"""
                         ,
@@ -433,14 +433,14 @@ def server(input, output, session):
                     easy_close=True,
                     footer = None)
         elif input.metrics() == "Time Savings":
-            m = ui.modal("""The Time Savings metric quantifies the time savings of paths from transport stations to residential centroids through the formula
+            m = ui.modal("""The Time Savings metric quantifies the time savings of paths (in minutes) from transport stations to residential centroids through the formula
                          Time Savings = Time Taken by Public Transport - Time Taken by Cycling. The value shows aggregate mean of all such time savings of paths within the planning area"""
                         ,
                     title = "Definition of Metric",
                     easy_close=True,
                     footer = None)
         elif input.metrics() == "Weighted Score":
-            m = ui.modal("""The Weighted Score metric quantifies overall score of the district based on the other metrics provided. 
+            m = ui.modal("""The Weighted Score metric quantifies overall score of the district (normalised from a score out of 100) based on the other metrics provided. 
                          The value shows aggregate mean of all such time savings of paths within the planning area"""
                         ,
                     title = "Definition of Metric",
