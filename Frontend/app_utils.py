@@ -93,7 +93,7 @@ def prepData():
     file_path2 = os.path.join(data_directory, 'ParkConnectorLoop.geojson')
     file_path3 = os.path.join(data_directory, 'unique_bicycle_parking_data.csv')
     file_path4 = os.path.join(data_directory, 'MasterPlan2019RegionBoundaryNoSeaGEOJSON.geojson')
-    file_path5 = os.path.join(data_directory, 'CyclingPath_Jul2023\CyclingPathGazette.shp')
+    file_path5 = os.path.join(data_directory, 'CyclingPath_Jul2023/CyclingPathGazette.shp')
     file_path6 = os.path.join(data_directory, 'Choke Points.kml')
 
     #Index Map
@@ -347,21 +347,24 @@ def haversine(lat1, lon1, lat2, lon2):
     return distance
 
 
-def SP2_get_centroid_from_postal_code(address):
+def SP2_get_centroid_from_postal_code(address, api_key):
+    print("running get_centroid_from_postal_code now.")
     if address == None or address == "" or type(address) != str:
         return None
-    load_dotenv()
+    # load_dotenv()
     df = pd.read_csv(os.path.join(data_directory, 'Cluster_data','indiv_combined_centroid_data_fixed.csv'),index_col = 0)
     df = df[["centroid_name","Latitude_x","Longitude_x","MRT.Name"]]
+    print("searching for address: ", address)
+    print("api_key is got: ",  api_key)
     #search for average coords of api results
-    one_map_email = os.getenv("ONE_MAP_EMAIL")
-    one_map_password = os.getenv("ONE_MAP_PASSWORD")
-    payload = {
-            "email": one_map_email,
-            "password": one_map_password
-        }
-    api_key = requests.request("POST", "https://www.onemap.gov.sg/api/auth/post/getToken", json=payload)
-    api_key = api_key.json()["access_token"]
+    # one_map_email = os.getenv("ONE_MAP_EMAIL")
+    # one_map_password = os.getenv("ONE_MAP_PASSWORD")
+    # payload = {
+    #         "email": one_map_email,
+    #         "password": one_map_password
+    #     }
+    # api_key = requests.request("POST", "https://www.onemap.gov.sg/api/auth/post/getToken", json=payload)
+    # api_key = api_key.json()["access_token"]
     onemap = OneMap(api_key)
     location = onemap.search(address)
     if location['found'] and location['found'] > 0:

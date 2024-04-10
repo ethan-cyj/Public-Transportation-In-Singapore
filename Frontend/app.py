@@ -20,8 +20,20 @@ from pathlib import Path
 from shiny.types import ImgData
 import numpy as np
 from dotenv import load_dotenv
+import requests
 
 load_dotenv()
+#initialise OneMap object here
+# one_map_email = os.getenv("ONE_MAP_EMAIL")
+# one_map_password = os.getenv("ONE_MAP_PASSWORD")
+# payload = {
+#             "email": one_map_email,
+#             "password": one_map_password
+#         }
+# api_key = requests.request("POST", "https://www.onemap.gov.sg/api/auth/post/getToken", json=payload)
+# api_key = api_key.json()["access_token"]
+# print(api_key)
+api_key = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI0NmJkYTI0NmI1NmM4ZDY5YWMyYzEyNmI2ZjEyOGU0MyIsImlzcyI6Imh0dHA6Ly9pbnRlcm5hbC1hbGItb20tcHJkZXppdC1pdC0xMjIzNjk4OTkyLmFwLXNvdXRoZWFzdC0xLmVsYi5hbWF6b25hd3MuY29tL2FwaS92Mi91c2VyL3Nlc3Npb24iLCJpYXQiOjE3MTI0Njk0MDQsImV4cCI6MTcxMjcyODYwNCwibmJmIjoxNzEyNDY5NDA0LCJqdGkiOiJRTWdrc3M2ZUlXNUd0OVFZIiwidXNlcl9pZCI6MjkxNCwiZm9yZXZlciI6ZmFsc2V9.GAjjMnx10GYzfZ2H4UWUQTZVYRAfO61Bet_eznqL7zI"
 current_directory = os.getcwd()
 data_directory = os.path.join(current_directory, 'data')
 www_dir = os.path.join(current_directory, 'Frontend','www')
@@ -516,7 +528,7 @@ def server(input, output, session):
     @render_widget
     @reactive.event(input.plot_route)
     def plot_path():
-        user_input = utils.SP2_get_centroid_from_postal_code(input.user_address())
+        user_input = utils.SP2_get_centroid_from_postal_code(input.user_address(), api_key)
         if not user_input:
             m = ui.modal("Invalid Input",
                     title = "Input returned no results, try a different address!",
@@ -581,7 +593,7 @@ def server(input, output, session):
     @render.text
     @reactive.event(input.plot_route)
     def route_instructions():
-        user_input = utils.SP2_get_centroid_from_postal_code(input.user_address())
+        user_input = utils.SP2_get_centroid_from_postal_code(input.user_address(), api_key)
         if not user_input:
             m = ui.modal("Invalid Input",
                     title = "Input returned no results, try a different address!",
