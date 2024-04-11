@@ -79,7 +79,7 @@ coords = mrt_df[['Latitude', 'Longitude']].values.tolist()
 app_ui = ui.page_navbar(
     theme.minty(),
     ui.nav_panel("Sub-Problem 1: Cycling Infrastructure Suitability Index", 
-                # title and background
+                # Title and Background
                 ui.row(
                     ui.column(7,
                               ui.h2("Which Subzone has Good/Bad Cycling Infrastructure?")),
@@ -365,6 +365,7 @@ def server(input, output, session):
         fig.update_layout(annotations=annotations)
         return fig
 
+    # Reactive button for instructions button
     @reactive.effect
     @reactive.event(input.sp2_help_button)
     async def _():
@@ -374,6 +375,7 @@ def server(input, output, session):
                 footer = None)
         ui.modal_show(m)
     
+    # Reactive button for button for explanation for why the 5-cluster method is used
     @reactive.effect
     @reactive.event(input.rationale_button)
     async def _():
@@ -383,6 +385,7 @@ def server(input, output, session):
                 footer = None)
         ui.modal_show(m)
     
+    # Printing of chloropeth map
     @output 
     @render_widget
     def chloropeth_map():
@@ -426,6 +429,7 @@ def server(input, output, session):
         )
         return fig
     
+    # Reactive effect for the help button to explain the corresponding metric selected by the user
     @reactive.effect
     @reactive.event(input.help_button)
     async def _():
@@ -465,7 +469,8 @@ def server(input, output, session):
                     easy_close=True,
                     footer = None)
         ui.modal_show(m)
-        
+    
+    # Reactive effect for the instruction button to tell users to input their weights
     @reactive.effect
     @reactive.event(input.instructions_button)
     async def _():
@@ -477,12 +482,15 @@ def server(input, output, session):
                 footer = None)
         ui.modal_show(m)
 
+    # Reactive effect for weight sum button to compute the sum of weights inputted by the user
     @reactive.Calc
     @reactive.event(input.weight_sum_btn)
     def weight_sum_btn():
         input.weight_sum_btn()
         sum_weights = input.w1() + input.w2() + input.w3() + input.w4()
         return(sum_weights)
+    
+    # Reactive effect to check the sum of weights inputted by the user that it is equal to 1
     @render.text
     def check_sum():
         x = weight_sum_btn()
@@ -496,7 +504,8 @@ def server(input, output, session):
                     footer = None)
             ui.modal_show(m)
             return "Sum is NOT 1.0"
-        
+    
+    # Reactive effect to generate data table if the weight sum is equal to 1
     @render.ui
     @reactive.event(input.generate_table)
     def centroid_mrt_metrics():
@@ -525,10 +534,12 @@ def server(input, output, session):
             with pd.option_context('display.float_format', '{:.3f}'.format):
                 return ui.HTML(DT(output[['Weighted Score (/100)', 'Point of Interest', 'Station', 'Planning Area', 'Cycling Distance (km)', 'Suitability (/10)', 'Time Savings (min)', 'Steepness (/5)']], filters=True, maxBytes=0, showIndex=True))
     
+    # Reactive effect to plot path given a valid input
     @render_widget
     @reactive.event(input.plot_route)
     def plot_path():
         user_input = utils.SP2_get_centroid_from_postal_code(input.user_address())
+        # Condition for invalid inputs to generate a pop-up for invalid addresses
         if not user_input:
             m = ui.modal("Invalid Input",
                     title = "Input returned no results, try a different address!",
@@ -590,6 +601,7 @@ def server(input, output, session):
             )
             return fig
     
+    # Reactive effect to plot path instructions given a valid input
     @render.text
     @reactive.event(input.plot_route)
     def route_instructions():
@@ -617,7 +629,9 @@ def server(input, output, session):
             except Exception as e:
                 return ""
     
-    #SP3
+    # SP3 Code
+    
+    # Reactive button for Instructions button for SP3
     @reactive.effect
     @reactive.event(input.sp3_help_button)
     async def _():
@@ -627,6 +641,7 @@ def server(input, output, session):
                 footer = None)
         ui.modal_show(m)
     
+    # Get Isochrones for a given MRT name
     def get_isochrone(name, mode, cutoff):
         variable_name = f"{mode}_isochrones"    
         df = globals()[variable_name] 
@@ -634,11 +649,13 @@ def server(input, output, session):
         isochrone = filtered_df[f'isochrone_{cutoff}M'].iloc[0]
         return isochrone
 
+    # Printing the text for the inputs selection by the user
     @render.text
     def txt():
         if len(input.transport_means()) == 2:
             transport_means1 = (input.transport_means())[0]
             transport_means2 = (input.transport_means())[1]
+            
             # Generate the initial text string
             initial_text = f"You are trying to find the maximum distance that can be travelled within {input.n_min()} minutes by {transport_means1} and {transport_means2} from the following stations:"
             
@@ -668,6 +685,7 @@ def server(input, output, session):
     def generateMapsp3():
         fig = go.Figure()
         for _, row in mrt_df.iterrows():
+            # Updating of MRT map coordinates
             fig.add_trace(go.Scattermapbox(
                 mode="markers",
                 lon=[row['Longitude']],

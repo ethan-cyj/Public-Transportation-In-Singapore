@@ -2,11 +2,15 @@ from sklearn.cluster import KMeans
 import numpy as np
 import folium
 import pandas as pd
+
+# Reading Bike Data
 bike_parking = pd.read_csv("unique_bicycle_parking_data.csv")
 print(bike_parking)
 
+# Converting coordinates to array form
 bike_park_coords = np.array(bike_parking[['Latitude', 'Longitude']])
 
+# Number of Clusters
 n_clusters = 55*5
 
 # Perform K-means clustering
