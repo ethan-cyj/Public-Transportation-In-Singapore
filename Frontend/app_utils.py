@@ -9,11 +9,11 @@ from bs4 import BeautifulSoup
 import json
 import yaml
 from pyonemap import OneMap
-from dotenv import load_dotenv
 import requests
 import plotly.graph_objects as go
 import csv
 import fiona
+
 fiona.drvsupport.supported_drivers['KML'] = 'rw' #setting up KML reader
 
 current_directory = os.getcwd()
@@ -93,7 +93,7 @@ def prepData():
     file_path2 = os.path.join(data_directory, 'ParkConnectorLoop.geojson')
     file_path3 = os.path.join(data_directory, 'unique_bicycle_parking_data.csv')
     file_path4 = os.path.join(data_directory, 'MasterPlan2019RegionBoundaryNoSeaGEOJSON.geojson')
-    file_path5 = os.path.join(data_directory, 'CyclingPath_Jul2023/CyclingPathGazette.shp')
+    file_path5 = os.path.join(data_directory, 'CyclingPath_Jul2023\CyclingPathGazette.shp')
     file_path6 = os.path.join(data_directory, 'Choke Points.kml')
 
     #Index Map
@@ -164,7 +164,7 @@ def createMap(subZoneScore, parkConnector_lats, parkConnector_lons, cyclingPath_
             go.Choroplethmapbox(
                 geojson=json.loads(subZoneScore.geometry.to_json()),
                 locations=subZoneScore.index,
-                colorscale=['rgba(147, 220, 187, 0.65)', 'rgba(20, 156, 88, 1.0)'],
+                colorscale=['rgba(50, 108, 110, 0.5)', 'rgba(32, 88, 95, 1.0)'],
                 z=subZoneScore['score'],
                 text = subZoneScore['DESCRIPTION'],
                 hovertemplate="%{text}<br>",
@@ -298,30 +298,6 @@ def SP2_Prep_Centroid_MRT_Metrics():
         output.loc[index, 'Planning_Area'] = Planning_Area.values[0]
 
     return output
-    # hdb_centroid_pair_df = pd.read_csv(os.path.join(data_directory, 'Cluster_data','HDB_Centroid_MRT pairing data.csv'))
-    # private_centroid_pair_df = pd.read_csv(os.path.join(data_directory, 'Cluster_data','Private_Centroid_MRT pairing data.csv'))
-    # hdb_centroid_pair_df = hdb_centroid_pair_df.drop(hdb_centroid_pair_df.columns[:2], axis=1)
-    # private_centroid_pair_df = private_centroid_pair_df.drop(private_centroid_pair_df.columns[:3], axis=1)
-    # combined_df = pd.concat([hdb_centroid_pair_df, private_centroid_pair_df], axis=0).reset_index(drop=True)
-    # combined_df['steepness'] = abs(combined_df['steepness'])
-    # combined_df['time_difference'] = -combined_df['time_difference'] #Reflect time savings as a positive number
-    # combined_df['cycle_route'] = combined_df['cycle_route'].apply(lambda x: yaml.load(x, Loader=yaml.SafeLoader))
-    # output = combined_df[combined_df.columns[[0,1,16,5,6,4,12,13,14,15,17,18,10]]].copy(deep = True)
-
-    # basemap = gpd.read_file(os.path.join(data_directory, 'MasterPlan2019PlanningAreaBoundaryNoSea.geojson'))
-    # basemap['Planning_Area'] = basemap["Description"].apply(lambda x:extract_td_contents(x)[0])
-    # basemap['geometry'] = basemap['geometry'].to_crs("4326")
-
-    # for index,row in output.iterrows():
-    #     point_coordinate = Point(row['Longitude_x'], row['Latitude_x'])
-    #     Planning_Area = basemap[basemap.geometry.contains(point_coordinate)]['Planning_Area'].reset_index(drop=True)
-    #     output.loc[index, 'Planning_Area'] = Planning_Area.values[0]
-
-    # return output
-
-# def calculate_weighted_score(dataframe,row1,row2,row3,row4):
-#     S = row1 * dataframe["distance"] + row2 * dataframe['suitability'] + row3 * dataframe["time_difference"] + row4 * dataframe["steepness"]
-#     return S
 
 def calculate_weighted_score(dataframe, row1, row2, row3, row4):
     numeric_columns = dataframe.select_dtypes(include='number')
@@ -347,26 +323,13 @@ def haversine(lat1, lon1, lat2, lon2):
     return distance
 
 
-def SP2_get_centroid_from_postal_code(address, api_key):
-    print("running get_centroid_from_postal_code now.")
+def SP2_get_centroid_from_postal_code(address):
     if address == None or address == "" or type(address) != str:
         return None
-    # load_dotenv()
     df = pd.read_csv(os.path.join(data_directory, 'Cluster_data','indiv_combined_centroid_data_fixed.csv'),index_col = 0)
     df = df[["centroid_name","Latitude_x","Longitude_x","MRT.Name"]]
-    print("searching for address: ", address)
-    print("api_key is got: ",  api_key)
     #search for average coords of api results
-    # one_map_email = os.getenv("ONE_MAP_EMAIL")
-    # one_map_password = os.getenv("ONE_MAP_PASSWORD")
-    # payload = {
-    #         "email": one_map_email,
-    #         "password": one_map_password
-    #     }
-    # api_key = requests.request("POST", "https://www.onemap.gov.sg/api/auth/post/getToken", json=payload)
-    # api_key = api_key.json()["access_token"]
-    onemap = OneMap(api_key)
-    location = onemap.search(address)
+    location = onemap_search(address)
     if location['found'] and location['found'] > 0:
         if location['found'] <=5:
             lat, long =0,0
@@ -386,3 +349,10 @@ def SP2_get_centroid_from_postal_code(address, api_key):
     df['euclidean'] = df.apply(lambda x: haversine(lat, long, x['Latitude_x'], x['Longitude_x']), axis=1)
     df = df[df['euclidean'] == df['euclidean'].min()]
     return (df["Latitude_x"].values[0], df["Longitude_x"].values[0])
+
+
+def onemap_search(address):
+    url = f"https://www.onemap.gov.sg/api/common/elastic/search?searchVal={address}&returnGeom=Y&getAddrDetails=Y"
+    response = requests.request("GET", url)
+    output = json.loads(response.text)
+    return output

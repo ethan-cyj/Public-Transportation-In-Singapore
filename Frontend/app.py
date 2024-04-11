@@ -528,7 +528,7 @@ def server(input, output, session):
     @render_widget
     @reactive.event(input.plot_route)
     def plot_path():
-        user_input = utils.SP2_get_centroid_from_postal_code(input.user_address(), api_key)
+        user_input = utils.SP2_get_centroid_from_postal_code(input.user_address())
         if not user_input:
             m = ui.modal("Invalid Input",
                     title = "Input returned no results, try a different address!",
@@ -593,7 +593,7 @@ def server(input, output, session):
     @render.text
     @reactive.event(input.plot_route)
     def route_instructions():
-        user_input = utils.SP2_get_centroid_from_postal_code(input.user_address(), api_key)
+        user_input = utils.SP2_get_centroid_from_postal_code(input.user_address())
         if not user_input:
             m = ui.modal("Invalid Input",
                     title = "Input returned no results, try a different address!",
