@@ -34,11 +34,7 @@ app_ui = ui.page_fluid(
                 )
             ),
             ui.column(3, 
-                # ui.input_select( 
-                #     "select_region",
-                #     "Select region",
-                #     choices=region
-                # ),
+
                 ui.input_select( 
                     "select_planning_area",
                     "Select Planning Area",
