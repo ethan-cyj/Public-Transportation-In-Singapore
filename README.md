@@ -1,12 +1,28 @@
 # CycleNation: Public Transportation In Singapore
 
-Welcome to our DSE3101 project
+Welcome to our DSE3101 project! We are The Justins, a team of eager and curious data science undergraduates.
 
 ## Project Overview
 
+With a greater emphasis on a car-lite society, this project aims to answer the following problem statement:
+
+How can we quantify bicycle accessibility by district, and therefore identify and provide recommendations for revamping cycling infrastructure by district?
+
+The project comprises of three sub-problems to deal with the problem:
+
+**Sub-Problem 1 (SP1)**: Cycling Infrastructure Quality Index. 
+
+In creating this index, we will utilise many infrastructural factors to compute an overall ranking for each subzone. This will help to identify which areas in Singapore are lacking in cycling infrastructures.
+
+**Sub-Problem 2 (SP2))**: Last-Mile Connectivity Assessment. 
+
+For this assessment, we will analyse the average distance from residential centroids to the nearest MRT stations within each district via cycling lanes and footpaths. This is to decide which areas in Singapore may benefit from the development of additional cycling lanes or improved pedestrian pathways.
+
+**Sub-Problem 3 (SP3)**: Multimodal Transport Alternatives Analysis. 
+
+In this analysis, we will compare the coverage and effectiveness of alternatives such as bus routes and pedestrian paths from MRT/ LRT stations given a particular time limit.
 
 ## Frontend
-
 
 ## Backend
 
@@ -46,7 +62,6 @@ We iteratively call and save the following Isochrones from 10min-60min, across 5
 
 note: SP3/app.py contains our draft implementation of subproblem 3
 
-
 ## Data
 
 All our data is taken from the scraped via:
@@ -66,6 +81,5 @@ All our data is taken from the scraped via:
 #### OTP
 
 - https://docs.opentripplanner.org/en/v2.5.0/Basic-Tutorial/
-
 
 ## Acknowledgements
