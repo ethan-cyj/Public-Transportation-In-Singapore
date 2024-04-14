@@ -286,9 +286,9 @@ def server(input, output, session):
         def txtsp1():
             name = sel.title()
             overallRank = subZoneScore.loc[subZoneScore['SUBZONE_N']==sel, 'Rank'].values[0]
-            if subZoneScore.loc[subZoneScore['SUBZONE_N']==sel, 'score'].values[0] > 0.4 :
+            if subZoneScore.loc[subZoneScore['SUBZONE_N']==sel, 'score'].values[0] > 0.42 :
                 goodbad = 'good'
-            elif subZoneScore.loc[subZoneScore['SUBZONE_N']==sel, 'score'].values[0] > 0.3:
+            elif subZoneScore.loc[subZoneScore['SUBZONE_N']==sel, 'score'].values[0] > 0.32:
                 goodbad = 'average'
             else: goodbad = 'bad'
             
@@ -299,14 +299,14 @@ def server(input, output, session):
             else:
                 lanes = 'has little amount of cycling paths. Could use some improvement.'
 
-            if subZoneScore.loc[subZoneScore['SUBZONE_N']==sel, 'BicycleParkingRank'].values[0] <= 45:
+            if subZoneScore.loc[subZoneScore['SUBZONE_N']==sel, 'BicycleParkingRank'].values[0] <= 80:
                 bicyclepark = 'has great amount of bicycle parking!'
             else:
                 bicyclepark = 'has an average amount of bicycle parking.'
 
             if subZoneScore.loc[subZoneScore['SUBZONE_N']==sel, 'ChokePointNormRank'].values[0] == 1:
                 chokept = 'has no chokepoints!'
-            elif subZoneScore.loc[subZoneScore['SUBZONE_N']==sel, 'ChokePointNormRank'].values[0] >= 300:
+            elif subZoneScore.loc[subZoneScore['SUBZONE_N']==sel, 'ChokePointNormRank'].values[0] >= 238:
                 chokept = 'has a lot of chokepoints as compared to other subzones.'
             else:
                 chokept = 'has an average amount of chokepoints.'
