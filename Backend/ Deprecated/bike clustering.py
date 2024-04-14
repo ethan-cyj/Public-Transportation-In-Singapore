@@ -4,7 +4,7 @@ import folium
 import pandas as pd
 
 # Reading Bike Data
-bike_parking = pd.read_csv("unique_bicycle_parking_data.csv")
+bike_parking = pd.read_csv("../../data/Bicycle/unique_bicycle_parking_data.csv")
 print(bike_parking)
 
 # Converting coordinates to array form
@@ -33,4 +33,4 @@ for coord in bikepark_centroids:
     ).add_to(sg_map)
 
 # Display the map
-sg_map.save('cluster_centroids_map.html')
+sg_map.save('../../data/Bicycle/bike_cluster_centroids_map.html')

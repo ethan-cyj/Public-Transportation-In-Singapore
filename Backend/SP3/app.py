@@ -31,7 +31,7 @@ mrt_isochrones = pd.read_json(os.path.join(isochrone_directory, 'mrt_isochrones_
 public_transport_isochrones = pd.read_json(os.path.join(isochrone_directory, 'public_isochrones_new.json'), orient='records', lines=True)
 mrt_names = mrt_df['MRT.Name'].values.tolist()
 coords = mrt_df[['Latitude', 'Longitude']].values.tolist()
-basemap = gpd.read_file(os.path.join(data_directory, 'MasterPlan2019PlanningAreaBoundaryNoSea.geojson'))
+basemap = gpd.read_file(os.path.join(data_directory, 'SP1/MasterPlan2019PlanningAreaBoundaryNoSea.geojson'))
 mrt_stations_df = pd.read_csv(os.path.join(data_directory, 'Cluster_data','mrt_station_final.csv'),usecols = [1,2,3])
 ranking = pd.read_csv(os.path.join(data_directory,'Cluster_data','mrt_ranking.csv'))
 
@@ -43,14 +43,14 @@ app_ui = ui.page_navbar(
                  ui.input_select("metrics", "Select Metric for Comparison", 
                                  choices=["Suitability", "Time Savings", "Weighted Score"],
                                  selected = "Suitability"),
-                ui.layout_columns(
-                    ui.card(
-                        output_widget("chloropeth_map")
-                    ),
-                    ui.card(
-                        ui.output_data_frame("path_metric")
-                    )
-                )
+                # ui.layout_columns(
+                #     ui.card(
+                #         output_widget("chloropeth_map")
+                #     ),
+                #     ui.card(
+                #         ui.output_data_frame("path_metric")
+                #     )
+                # )
     ),
     ui.nav_panel("Sub-Problem 3: Isochrone Analysis",
                 ui.h2("Distance Travellable from MRT/LRT Stations"),
@@ -85,73 +85,73 @@ app_ui = ui.page_navbar(
 
 def server(input, output, session):
     #SP2 Functions
-    def extract_td_contents(html):
-        soup = BeautifulSoup(html, 'html.parser')
-        table = soup.find('table')
-        rows = table.find_all('tr')
+    # def extract_td_contents(html):
+    #     soup = BeautifulSoup(html, 'html.parser')
+    #     table = soup.find('table')
+    #     rows = table.find_all('tr')
 
-        td_contents = []
-        for row in rows:
-            cells = row.find_all('td')
-            for cell in cells:
-                td_contents.append(cell.text.strip())
+    #     td_contents = []
+    #     for row in rows:
+    #         cells = row.find_all('td')
+    #         for cell in cells:
+    #             td_contents.append(cell.text.strip())
 
-        return td_contents
+    #     return td_contents
 
     
-    basemap['Planning_Area'] = basemap["Description"].apply(lambda x:extract_td_contents(x)[0])
-    basemap['geometry'] = basemap['geometry'].to_crs("4326")
+    # basemap['Planning_Area'] = basemap["Description"].apply(lambda x:extract_td_contents(x)[0])
+    # basemap['geometry'] = basemap['geometry'].to_crs("4326")
 
-    mrt_stations_df.sort_values(by='MRT.Name', inplace=True)
+    # mrt_stations_df.sort_values(by='MRT.Name', inplace=True)
     
-    mrt_stations_df_combined = pd.merge(mrt_stations_df, ranking, left_on='MRT.Name', right_on='MRT.Name', how='left')
-    for index, row in mrt_stations_df_combined.iterrows():
-        point_coordinate = Point(row['Longitude'], row['Latitude'])
-        Planning_Area = basemap[basemap.geometry.contains(point_coordinate)]['Planning_Area'].reset_index(drop=True)
-        mrt_stations_df_combined.loc[index, 'Planning_Area'] = Planning_Area.values[0]
+    # mrt_stations_df_combined = pd.merge(mrt_stations_df, ranking, left_on='MRT.Name', right_on='MRT.Name', how='left')
+    # for index, row in mrt_stations_df_combined.iterrows():
+    #     point_coordinate = Point(row['Longitude'], row['Latitude'])
+    #     Planning_Area = basemap[basemap.geometry.contains(point_coordinate)]['Planning_Area'].reset_index(drop=True)
+    #     mrt_stations_df_combined.loc[index, 'Planning_Area'] = Planning_Area.values[0]
 
-    mrt_stations_df_combined = mrt_stations_df_combined.rename(columns = {'MRT.Name':'MRT Name',
-                                                                        'time_difference':'Time Savings',
-                                                                        'Weighted_Score':'Weighted Score',
-                                                                        'suitability':'Suitability'})
+    # mrt_stations_df_combined = mrt_stations_df_combined.rename(columns = {'MRT.Name':'MRT Name',
+    #                                                                     'time_difference':'Time Savings',
+    #                                                                     'Weighted_Score':'Weighted Score',
+    #                                                                     'suitability':'Suitability'})
     
-    path_metrics = pd.read_csv(os.path.join(data_directory, 'path_metrics.csv'))
-    path_metrics = path_metrics.astype(str)
+    # path_metrics = pd.read_csv(os.path.join(data_directory, 'path_metrics.csv'))
+    # path_metrics = path_metrics.astype(str)
 
-    @output 
-    @render_widget
-    def chloropeth_map():
-        df = mrt_stations_df_combined.groupby('Planning_Area').agg({input.metrics():'mean'}).reset_index()
-        basemap_modified = pd.merge(basemap, df, left_on='Planning_Area', right_on='Planning_Area', how='left')
-        fig = go.Figure()
-        fig.add_trace(go.Choroplethmapbox(geojson=json.loads(basemap_modified.geometry.to_json()), 
-                                   locations=basemap_modified.index,
-                                   z=basemap_modified[input.metrics()],
-                                   colorscale='RdYlGn',
-                                   hoverinfo = 'text',
-                                   text = ("Planning Area: " + basemap_modified['Planning_Area'] + '<br>' + 
-                                           "Average " + input.metrics() + " of Paths Within the Area: " + round(basemap_modified[input.metrics()],2).astype(str) )))
+    # @output 
+    # @render_widget
+    # def chloropeth_map():
+    #     df = mrt_stations_df_combined.groupby('Planning_Area').agg({input.metrics():'mean'}).reset_index()
+    #     basemap_modified = pd.merge(basemap, df, left_on='Planning_Area', right_on='Planning_Area', how='left')
+    #     fig = go.Figure()
+    #     fig.add_trace(go.Choroplethmapbox(geojson=json.loads(basemap_modified.geometry.to_json()), 
+    #                                locations=basemap_modified.index,
+    #                                z=basemap_modified[input.metrics()],
+    #                                colorscale='RdYlGn',
+    #                                hoverinfo = 'text',
+    #                                text = ("Planning Area: " + basemap_modified['Planning_Area'] + '<br>' + 
+    #                                        "Average " + input.metrics() + " of Paths Within the Area: " + round(basemap_modified[input.metrics()],2).astype(str) )))
         
-        fig.add_trace(go.Scattergeo(geojson=json.loads(basemap_modified.geometry.to_json()),
-                                    locations = basemap_modified.index,
-                                    featureidkey= 'properties.index',
-                                    text = basemap_modified['Planning_Area'],
-                                    mode = 'text',))
+    #     fig.add_trace(go.Scattergeo(geojson=json.loads(basemap_modified.geometry.to_json()),
+    #                                 locations = basemap_modified.index,
+    #                                 featureidkey= 'properties.index',
+    #                                 text = basemap_modified['Planning_Area'],
+    #                                 mode = 'text',))
 
-        fig.update_layout(
-            margin={'l':0,'t':0,'b':0,'r':0},
-            mapbox={
-                'style': "open-street-map",
-                'center': {'lat': 1.36, 'lon': 103.85},
-                'zoom': 10
-            }
-        )
-        return fig
+    #     fig.update_layout(
+    #         margin={'l':0,'t':0,'b':0,'r':0},
+    #         mapbox={
+    #             'style': "open-street-map",
+    #             'center': {'lat': 1.36, 'lon': 103.85},
+    #             'zoom': 10
+    #         }
+    #     )
+    #     return fig
     
-    @output
-    @render.data_frame
-    def path_metric():
-        return render.DataTable(path_metrics,width = "100%",height = "300px")
+    # @output
+    # @render.data_frame
+    # def path_metric():
+    #     return render.DataTable(path_metrics,width = "100%",height = "300px")
 
     
     #SP3

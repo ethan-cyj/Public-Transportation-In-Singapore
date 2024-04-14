@@ -77,12 +77,12 @@ def prepData():
     '''
     current_directory = os.getcwd()
     data_directory = os.path.join(current_directory, 'data') #../../
-    file_path1 = os.path.join(data_directory, 'subZoneScore.csv')
-    file_path2 = os.path.join(data_directory, 'ParkConnectorLoop.geojson')
+    file_path1 = os.path.join(data_directory, 'SP1/subZoneScore.csv')
+    file_path2 = os.path.join(data_directory, 'SP1/ParkConnectorLoop.geojson')
     file_path3 = os.path.join(data_directory, 'unique_bicycle_parking_data.csv')
-    file_path4 = os.path.join(data_directory, 'MasterPlan2019RegionBoundaryNoSeaGEOJSON.geojson')
+    file_path4 = os.path.join(data_directory, 'SP1/MasterPlan2019RegionBoundaryNoSeaGEOJSON.geojson')
     file_path5 = os.path.join(data_directory, 'CyclingPath_Jul2023\CyclingPathGazette.shp')
-    file_path6 = os.path.join(data_directory, 'Choke Points.kml')
+    file_path6 = os.path.join(data_directory, 'SP1/Choke Points.kml')
 
     #Index Map
     subZoneScore = pd.read_csv(file_path1)

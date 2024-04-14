@@ -1,10 +1,14 @@
+#This file reads the MRT stations from a shapefile and extracts the latitude and longitude of each MRT station using the OneMap API. 
+#File is checked for the MRT stations that were not found in the API response.
+#The extracted data is then saved to a CSV file.
+
 from dbfread import DBF
 from http.client import HTTPConnection
 import json
 import pandas as pd
 import geopandas as gpd
 import requests
-df = gpd.read_file("RapidTransitSystemStation.shp")
+df = gpd.read_file("../data/MRT/RapidTransitSystemStation.shp")
 mrt_list = df['STN_NAM_DE']
 
 #Extracting the MRT stations
@@ -49,4 +53,4 @@ print("MRT names not in DataFrame:")
 for mrt_name in mrt_names_not_in_df:
     print(mrt_name)
 
-df.to_csv("mrt_stations.csv")
+df.to_csv("../data/MRT/mrt_stations.csv")
