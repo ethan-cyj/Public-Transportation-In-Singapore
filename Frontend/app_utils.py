@@ -89,12 +89,12 @@ def prepData():
     '''
     current_directory = os.getcwd()
     data_directory = os.path.join(current_directory, 'data') #../../
-    file_path1 = os.path.join(data_directory, 'subZoneScore.csv')
-    file_path2 = os.path.join(data_directory, 'ParkConnectorLoop.geojson')
+    file_path1 = os.path.join(data_directory, 'SP1/subZoneScore.csv')
+    file_path2 = os.path.join(data_directory, 'SP1/ParkConnectorLoop.geojson')
     file_path3 = os.path.join(data_directory, 'unique_bicycle_parking_data.csv')
-    file_path4 = os.path.join(data_directory, 'MasterPlan2019RegionBoundaryNoSeaGEOJSON.geojson')
+    file_path4 = os.path.join(data_directory, 'SP1/MasterPlan2019RegionBoundaryNoSeaGEOJSON.geojson')
     file_path5 = os.path.join(data_directory, 'CyclingPath_Jul2023\CyclingPathGazette.shp')
-    file_path6 = os.path.join(data_directory, 'Choke Points.kml')
+    file_path6 = os.path.join(data_directory, 'SP1/Choke Points.kml')
 
     #Index Map
     subZoneScore = pd.read_csv(file_path1)
@@ -252,7 +252,7 @@ def extract_td_contents(html):
     return td_contents
 
 def SP2_prep_Chloropeth_Map():
-    basemap = gpd.read_file(os.path.join(data_directory, 'MasterPlan2019PlanningAreaBoundaryNoSea.geojson'))
+    basemap = gpd.read_file(os.path.join(data_directory, 'SP1/MasterPlan2019PlanningAreaBoundaryNoSea.geojson'))
     mrt_stations_df = pd.read_csv(os.path.join(data_directory, 'Cluster_data','mrt_station_final.csv'),usecols = [1,2,3])
     cluster_ranking = pd.read_csv(os.path.join(data_directory,'Cluster_data','5_cluster_mrt_ranking.csv'))
         
@@ -288,7 +288,7 @@ def SP2_Prep_Centroid_MRT_Metrics():
     indiv_combined_centroid_df['time_difference'] = -indiv_combined_centroid_df['time_difference'] #Reflect time savings as a positive number
 
     output = indiv_combined_centroid_df[indiv_combined_centroid_df.columns[[0,1,4,5,6,10,12,13,14,15,16,17,18,19]]].copy(deep = True)
-    basemap = gpd.read_file(os.path.join(data_directory, 'MasterPlan2019PlanningAreaBoundaryNoSea.geojson'))
+    basemap = gpd.read_file(os.path.join(data_directory, 'SP1/MasterPlan2019PlanningAreaBoundaryNoSea.geojson'))
     basemap['Planning_Area'] = basemap["Description"].apply(lambda x:extract_td_contents(x)[0])
     basemap['geometry'] = basemap['geometry'].to_crs("4326")
 
