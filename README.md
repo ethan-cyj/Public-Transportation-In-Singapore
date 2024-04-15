@@ -12,18 +12,49 @@ Our web application is run via Shiny for Python, and all visualisations are host
 
  Upon running Frontend/app.py in a local server, we may view the app in a web browser page.
 
-#### **Sub-Problem 1 (SP1)**: Cycling Infrastructure Quality Index.![1713160463936](image/README/1713160463936.png)
+### **Sub-Problem 1 (SP1)**: Cycling Infrastructure Quality Index.
 
-In creating this index, we will utilise many infrastructural factors to compute an overall ranking for each subzone. This will help to identify which areas in Singapore are lacking in cycling infrastructures.
+![1713163502119](image/README/1713163502119.png)
+
+In creating this index, we will utilise different infrastructural factors to compute an overall ranking for each subzone. This will help to identify which areas in Singapore are lacking in cycling infrastructures. We used the total length of bicycle lanes (inclusive of both cycling lanes and regional park connectors) and number of bicycle parking as features in the computation of the index. We also included more features, such as the presence of hazards along dedicated bicycle lanes, such as traffic lights, steps and overpasses, etc.
+
+![1713163888229](image/README/1713163888229.png)
+
+In the above figure, after users zoom into their subzone of interest, the textbox above the map will update, guiding users on the interpretation. A few conditions were used in the computation of this message.
+
+1. All four types of Scores(Cycling Lanes, Bicycle Parking, Choke Point, Overall) are considered good if they are better than the upper quartile. It is considered bad if it is worse than the lower quartile. Otherwise, it will be considered average.
+2. Since there are many subzones with no cycling paths at all, a Total Cycling Path Rank of 139 means that there are no cycling paths at all. Similarly, subzones with a Choke Point Ranking of 1 means that there are no choke points present.
+
+### **Sub-Problem 2 (SP2)**: Last-Mile Connectivity Assessment.
+
+Last mile connectivity, defined as the ease of completing the last leg of a journey from a transport hub to a final destination, is an important consideration for the users in choosing between different modes of transport and for the government who is providing and creating policies around it. For this assessment, we will analyse the average distance from residential centroids to the nearest MRT stations within each planning area via cycling lanes and footpaths. This is to decide which areas in Singapore may benefit from the development of additional cycling lanes or improved pedestrian pathways.
+
+###### For Policy Makers:
+
+![1713164361476](image/README/1713164361476.png)
+
+The choropleth Map provides a high level snapshot of cycling accessibility across Singapore's planning areas by using a devised nearest 5 cluster method. Users may select from the following available metrics: Time Savings, Route Distance, Suitability (of path for cycling), and a Weighted Score  derived from the previously mentioned metrics. These metrics are explained in further detail in Backend.
+
+Users will also be able to view the rankings of each planning area, for the specified metric, on the right plot.
+
+###### For Prospective Cyclists:
+
+![1713164711468](image/README/1713164711468.png)
+
+Taking the perspective of prospective cyclist, we might want to visualise how individual cycling routes from a residential cluster to its closest MRT station performs. The detailed datatable allows users to search and compare clusters and/or MRT stations by the previously mentioned metrics. 
+
+Additionally, we implement functionality to allow users to speficy the weights of our weighted score formula and the table will update the weighted scores. One can filter and sort based on the given columns to assess which are the best/worst paths.
+
+Lastly, users may retrieve and visualise the actual route and directions for their closest residential cluster. 
 
 
-#### **Sub-Problem 2 (SP2))**: Last-Mile Connectivity Assessment.
+### **Sub-Problem 3 (SP3)**: Multimodal Transport Alternatives Analysis.
 
-For this assessment, we will analyse the average distance from residential centroids to the nearest MRT stations within each district via cycling lanes and footpaths. This is to decide which areas in Singapore may benefit from the development of additional cycling lanes or improved pedestrian pathways.
+In this analysis, we will compare the coverage and effectiveness of alternatives such as bus routes and pedestrian paths from MRT/ LRT stations given a particular time limit, using isochrone maps.
 
-#### **Sub-Problem 3 (SP3)**: Multimodal Transport Alternatives Analysis.
+![1713165391875](image/README/1713165391875.png)
 
-In this analysis, we will compare the coverage and effectiveness of alternatives such as bus routes and pedestrian paths from MRT/ LRT stations given a particular time limit.
+Through the specification of the transport modes, MRT/LRT stations, and time limit, colours of the various MRT/LRT stations have been tagged by their respective MRT/LRT line colours to allow users to better identify the stations as well. This visualisation is expected to aid LTA in the decision of the coverage of the MRT/LRT stations. With more MRT/LRT stations having their isochrone plots overlapping with one another, this simply means that residents staying within overlapping regions have a greater accessibility in general as they have access to greater numbers of MRT/LRT stations in the specified time limit.
 
 ## Backend
 
@@ -36,13 +67,14 @@ mrtstations.py
 * consolidate MRT station coordinates
 * We combine from data.gov.sg as well as OneMap API, in order to validate that our data is up to date
 
-#### SP2
+#### SP2 {SP2}
 
 Pairing of MRT and Residential Clusters
 
 * uses OneMap, ORS and OTP APIs to get data required for SP2 visualisation
 * Data cleaning performed
 * Pairing is performed for both n(5) pairing method and individual pairing method.
+* explain two pairing methods
 * explain routing API function here
 
 MRT Rankings
@@ -56,7 +88,6 @@ SP3_generate_isochrones.ipynb
 
 - Here we write API calling function for OTP's Isochrone API.
 - explain briefly
-
 
 We iteratively call and save the following Isochrones from 10min-60min, across 5min intervals
 
@@ -79,7 +110,6 @@ In the gathering of raw data, there were several datasets that were drawn from v
 6. MRT Stations. This was obtained from a combination of multiple use of OneMap and [LTA Datamall](https://datamall.lta.gov.sg/content/datamall/en/static-data.html). Obtaining the names of all MRT and LRT stations, the exact coordinates of this station was obtained from OneMap by running the names of these stations into the API call through the use of a for-loop. The dataset was then constructed through the binding of columns of the names of the MRT/ LRT stations and their corresponding latitude and longitude coordinates. In preparation for analysis, the removal of stations that are built but not functioning was done as well. This includes stations such as Mount Pleasant Station and Marina South Station.
 7. Private and Public housing coordinates from [data.gov](https://data.gov.sg/). Coordinate data of all HDB blocks (12847 rows) as well as private property locations (82667 rows) are obtained directly as .csv.
 8. Resident Population. Last updated in June 2021, the data shows the total number of resident population in each subzone (URA Master Plan 2019) and their breakdown by age and sex. The data was downloaded as a .CSV file from the [Singapore Department of Statistics](https://www.singstat.gov.sg/publications/reference/cop2020/cop2020-sr1).
-
 
 ## Set Up
 
@@ -124,4 +154,4 @@ We credit the following data sources and API services for providing the resource
   - Cycling Choke points: [pcncyclingsingapore](https://pcncyclingsingapore.wordpress.com/)
   - PCN: [National Parks Board](https://beta.data.gov.sg/datasets/d_a69ef89737379f231d2ae93fd1c5707f/view)
 
-Additionally, we would like to acknowlege our professors, Prof Huang and Prof Denis, for their guidance over the duration of developing this project. Thank you!
+Additionally, we would like to acknowlege our professors, Prof Huang Yuting and Prof Denis Tkachenko, for their guidance over the duration of developing this project. Thank you!
