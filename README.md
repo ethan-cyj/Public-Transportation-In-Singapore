@@ -72,14 +72,17 @@ Through the specification of the transport modes, MRT/LRT stations, and time lim
 
 ## Backend
 
-residential_data.ipynb
+##### Pre-processing
 
-- generate residential clusters via K-means clustering
+Data pre-processing is performed in the following files, to prepare the coordinate data for MRT stations  as well as residential clusters.
 
-mrtstations.py
+- residential_data.ipynb
+  - In order to find meaningful representations of residential areas, we performed K-means clustering of private residential areas and HDB blocks, to obtain 10 clusters each, for a total of 1100 clusters across 55 planning areas.
 
-* consolidate MRT station coordinates
-* We combine from data.gov.sg as well as OneMap API, in order to validate that our data is up to date
+    ![1713169939558](image/README/1713169939558.png)
+  - The total number of clusters was arbitrarily modified until it satisfactorily encapsulated the distribution of residential areas across Singapore.
+- mrtstations.py
+  - We consolidate MRT station coordinates from data.gov.sg as well as OneMap API, in order to get the most up-to-date locations of MRT stations.
 
 #### SP1
 
