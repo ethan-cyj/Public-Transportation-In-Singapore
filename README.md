@@ -81,7 +81,11 @@ mrtstations.py
 * consolidate MRT station coordinates
 * We combine from data.gov.sg as well as OneMap API, in order to validate that our data is up to date
 
-#### SP2 {SP2}
+#### SP1
+
+* explain how index is computed
+
+#### SP2
 
 Pairing of MRT and Residential Clusters
 
