@@ -1,6 +1,6 @@
 # CycleNation: Public Transportation In Singapore
 
-Welcome to our DSE3101 project! We are The Justins, a team of eager and curious data science undergraduates.
+Welcome to our DSE3101 project! We are The Justins, a team of eager and curious data science undergraduates at NUS.
 
 ## Project Overview
 
