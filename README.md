@@ -4,7 +4,20 @@ Welcome to our DSE3101 project! We are The Justins, a team of eager and curious 
 
 ## Project Overview
 
+#### Exploratory Data Analysis
+
+![1713166751553](image/README/1713166751553.png)
+
+Green bars denote usage of bicycles for transport in Singapore, whether to work or school. We can see that there is a low usage of bicycles for transport. Yet there is a high usage of MRT, which we believe presents us a use-case for cycling, as a last-leg transport mode from MRT stations to residential areas.
+
+
 With a greater emphasis on a car-lite society, this project aims to answer the following problem statement: How can we quantify bicycle accessibility by district, and therefore identify and provide recommendations for revamping cycling infrastructure by district? The project comprises of three sub-problems to deal with the problem:
+
+* Cycling Infrastructure Quality Index.
+* Last-Mile Connectivity Assessment.
+* Multimodal Transport Alternatives Analysis.
+
+These are explained in detail in the following section.
 
 ## Frontend
 
