@@ -10,6 +10,7 @@ Welcome to our DSE3101 project! We are The Justins, a team of eager and curious 
 
 Green bars denote usage of bicycles for transport in Singapore, whether to work or school. We can see that there is a low usage of bicycles for transport. Yet there is a high usage of MRT, which we believe presents us a use-case for cycling, as a last-leg transport mode from MRT stations to residential areas.
 
+#### Problem Statement
 
 With a greater emphasis on a car-lite society, this project aims to answer the following problem statement: How can we quantify bicycle accessibility by district, and therefore identify and provide recommendations for revamping cycling infrastructure by district? The project comprises of three sub-problems to deal with the problem:
 
@@ -122,7 +123,7 @@ In the gathering of raw data, there were several datasets that were drawn from v
 5. Cycling Choke Points. Last updated in March 2024, this shows the points representing the potential choke points or hazards for cyclists. This was downloaded as a .KML file from [pcncyclingsingapore](https://pcncyclingsingapore.wordpress.com/).
 6. MRT Stations. This was obtained from a combination of multiple use of OneMap and [LTA Datamall](https://datamall.lta.gov.sg/content/datamall/en/static-data.html). Obtaining the names of all MRT and LRT stations, the exact coordinates of this station was obtained from OneMap by running the names of these stations into the API call through the use of a for-loop. The dataset was then constructed through the binding of columns of the names of the MRT/ LRT stations and their corresponding latitude and longitude coordinates. In preparation for analysis, the removal of stations that are built but not functioning was done as well. This includes stations such as Mount Pleasant Station and Marina South Station.
 7. Private and Public housing coordinates from [data.gov](https://data.gov.sg/). Coordinate data of all HDB blocks (12847 rows) as well as private property locations (82667 rows) are obtained directly as .csv.
-8. Resident Population. Last updated in June 2021, the data shows the total number of resident population in each subzone (URA Master Plan 2019) and their breakdown by age and sex. The data was downloaded as a .CSV file from the [Singapore Department of Statistics](https://www.singstat.gov.sg/publications/reference/cop2020/cop2020-sr1).
+8. Resident Population. Last updated in June 2021, the data shows the total number of resident population in each subzone (URA Master Plan 2019) and their breakdown by age and sex. The data was downloaded as a .csv file from the [Singapore Department of Statistics](https://www.singstat.gov.sg/publications/reference/cop2020/cop2020-sr1).
 
 ## Set Up
 
@@ -130,6 +131,10 @@ In the gathering of raw data, there were several datasets that were drawn from v
 
 - Python libraries
   - Can be found in requirements.txt
+  - ```
+    pip install -r requirements.txt
+
+    ```
 - API Access Tokens
   - OneMap and OpenRouteService APIs used both required API keys, which are stored in a .env in the parent directory.
 
