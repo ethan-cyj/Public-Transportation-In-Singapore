@@ -47,7 +47,7 @@ Last mile connectivity, defined as the ease of completing the last leg of a jour
 
 ![1713164361476](image/README/1713164361476.png)
 
-The choropleth Map provides a high level snapshot of cycling accessibility across Singapore's planning areas by using a devised nearest 5 cluster method. Users may select from the following available metrics: Time Savings, Route Distance, Suitability (of path for cycling), and a Weighted Score  derived from the previously mentioned metrics. These metrics are explained in further detail in Backend.
+The Choropleth Map provides a high level snapshot of cycling accessibility across Singapore's planning areas by using a devised nearest 5-cluster method. Users may select from the following available metrics: Time Savings, Route Distance, Suitability (of path for cycling), and a Weighted Score  derived from the previously mentioned metrics. These metrics are explained in further detail in Backend.
 
 Users will also be able to view the rankings of each planning area, for the specified metric, on the right plot.
 
@@ -57,7 +57,7 @@ Users will also be able to view the rankings of each planning area, for the spec
 
 Taking the perspective of prospective cyclist, we might want to visualise how individual cycling routes from a residential cluster to its closest MRT station performs. The detailed datatable allows users to search and compare clusters and/or MRT stations by the previously mentioned metrics. 
 
-Additionally, we implement functionality to allow users to speficy the weights of our weighted score formula and the table will update the weighted scores. One can filter and sort based on the given columns to assess which are the best/worst paths.
+Additionally, we implement functionality to allow users to specify the weights of our weighted score formula and the table will update the weighted scores. One can filter and sort based on the given columns to assess which are the best/worst paths.
 
 Lastly, users may retrieve and visualise the actual route and directions for their closest residential cluster. 
 
@@ -72,7 +72,7 @@ Through the specification of the transport modes, MRT/LRT stations, and time lim
 
 ## Backend
 
-##### Pre-processing
+#### Pre-processing
 
 Data pre-processing is performed in the following files, to prepare the coordinate data for MRT stations  as well as residential clusters.
 
@@ -86,7 +86,7 @@ Data pre-processing is performed in the following files, to prepare the coordina
 
 #### SP1
 
-* Explain how index is computed
+To rank the different subzones, each factor will have a corresponding score for each metric to be compared against one another. The overall score of performance of the cycling infrastructure is also computed through a weighted sum and further normalisation which is further explained below:
 
 <u>Generation of Final Score</u>
 * Tagging of importance by weights
@@ -94,7 +94,7 @@ Data pre-processing is performed in the following files, to prepare the coordina
 
 Final Score = Weighted Score / log<sub>e</sub>Area<sup>Subzone</sup> / log<sub>e</sub>Pop<sup>Subzone</sup>
 
-Weighted Score = w<sub>1</sub> · S<sup>Lanes</sup> + w<sub>2</sub> · S<sup>Parking</sup> + \sum_{c=0}^{10} w<sub>c</sub> · S<sup>Choke</sup>
+Weighted Score = w<sub>1</sub> · S<sup>Lanes</sup> + w<sub>2</sub> · S<sup>Parking</sup> + $\sum_{c=0}^{10}$ w<sub>c</sub> · S<sup>Choke</sup>
 
 Where Area<sup>Subzone</sup> is the area of the subzone, Pop<sup>Subzone</sup> is the resident population in the subzone, S<sup>Lanes</sup> is the score calculated from the total length of cycling lanes, S<sup>Parking</sup> is the score calculated from the number of bicycle parking, S<sup>Choke</sup> is the score calculated from the number of choke points present and <var>c</var> denotes the type of choke point present, <var>w</var> is the weight associated with the corresponding score. All scores are calculated within subzones. 
 
@@ -104,17 +104,14 @@ Next, the normalisation by the population size and area of the subzone was done 
 
 #### SP2
 
-Pairing of MRT and Residential Clusters
+Firstly, in the pairing of MRT and Residential Clusters, OneMap, ORS and OTP APIs were utilised to get data required for SP2 visualisations. Data cleaning was performed on these datasets before pairing is performed for both n(5) pairing method and individual pairing method. 
 
-* Uses OneMap, ORS and OTP APIs to get data required for SP2 visualisation
-* Data cleaning performed
-* Pairing is performed for both n(5) pairing method and individual pairing method.
-* Explain two pairing methods
-* Explain routing API function here
+The n(5) pairing method refers to the assessment of the accessibility of the MRT/LRT stations based on their proximity to the nearest 5 centroids.
 
-MRT Rankings
+In the individual pairing method, starting from the individual HDBs and Private Estates, we attempted to generalise the population neighbourhoods 1100 centroids across the whole of Singapore. From these centroids, we cross-joined with operational transport stations (MRT & LRT) to obtain all combinations of centroid/station pairings. We then calculated the “euclidean distance”* from each centroid to every station, before taking the closest one for each station. 
 
-* Here we formulated our SP2 weighted score function
+Following the pairing of the stations, the performance of the different districts were compared through the computation of the overall final score which will be explained below:
+
 <u>Computation of Final Score</u>
 
 Weighted Score = w<sub>1</sub> · (T<sub>i</sub><sup>Cycling</sup> - T<sub>i</sub><sup>Bus</sup>) + w<sub>2</sub> · D<sub>i</sub> + w<sub>3</sub> · S<sub>i</sub><sup>Suitability</sup> + w<sub>4</sub> · S<sub>i</sub><sup>Steepness</sup>
@@ -127,10 +124,7 @@ Without transforming the data, taking the absolute value would result in the com
 
 SP3_generate_isochrones.ipynb
 
-- Here we write API calling function for OTP's Isochrone API.
-- explain briefly
-
-We iteratively call and save the following Isochrones from 10min-60min, across 5min intervals
+In this particular code file, we called the API from OTP to obtain the isochrones from all MRT stations. We iteratively call and save the following Isochrones from 10min-60min, across 5-minute intervals:
 
 * Cycling
 * Bus + Walk
