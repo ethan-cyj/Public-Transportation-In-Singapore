@@ -91,12 +91,13 @@ Data pre-processing is performed in the following files, to prepare the coordina
 <u>Generation of Final Score</u>
 * Tagging of importance by weights
 * The following formula shows the computation of the overall score of each subzone
-![alt text](image/README/image.png)
-![alt text](image/README/image-1.png)
+
+Final Score = Weighted Score \div log<sub>e</sub>Area(<sup>Subzone</sup>) \div log<sub>e</sub>Pop(<sup>Subzone</sup>)
+Weighted Score = w<sub>1</sub> · S<sup>Lanes</sup> + w<sub>2</sub> · S<sup>Parking</sup> + \sum_{c=1}^10 w<sub>c</sub> · S<sup>Choke</sup> \right
 
 Where Area<sup>Subzone</sup> is the area of the subzone, Pop<sup>Subzone</sup> is the resident population in the subzone, S<sup>Lanes</sup> is the score calculated from the total length of cycling lanes, S<sup>Parking</sup> is the score calculated from the number of bicycle parking, S<sup>Choke</sup> is the score calculated from the number of choke points present and <var>c</var> denotes the type of choke point present, <var>w</var> is the weight associated with the corresponding score. All scores are calculated within subzones. 
 
-For our project, we decided to fix the weights for each factor in order to form an objective comparison, where w<sub>Lanes</sub> = 4, w<sub>Parking</sub> = 3, while w<sub>c</sub> = -0.5 if the chokepoint has bicycle-friendly cycling features, and w<sub>c</sub> = -1 if it does not. In future works, we intend to leave the setting of these weights for users to input so as to cater to their personal preferences.
+For our project, we decided to fix the weights for each factor in order to form an objective comparison, where w<sub>1</sub> = 4, w<sub>2</sub> = 3, while w<sub>c</sub> = -0.5 if the chokepoint has bicycle-friendly cycling features, and w<sub>c</sub> = -1 if it does not. In future works, we intend to leave the setting of these weights for users to input so as to cater to their personal preferences.
 
 Next, the normalisation by the population size and area of the subzone was done to consider the inconvenience of cycling in areas with more people, and larger subzones where cycling paths tend to be more sparse. 
 
@@ -114,7 +115,8 @@ MRT Rankings
 
 * Here we formulated our SP2 weighted score function
 <u>Computation of Final Score</u>
-![alt text](image/README/image-3.png)
+
+Weighted Score = w<sub>1</sub> · (T<sub>i</sub><sup>Cycling</sup> - T<sub>i</sub><sup>Bus</sup>) + w<sub>2</sub> · D<sub>i</sub> + w<sub>3</sub> · S<sub>i</sub><sup>Suitability</sup> + w<sub>4</sub> · S<sub>i</sub><sup>Steepness</sup>
 
 Where T<sub>i</sub><sup>Cycling</sup> is the time taken by cycling, T<sub>i</sub><sup>Bus</sup> is the time taken by public transport (bus and walking), (T<sub>i</sub><sup>Cycling</sup> - T<sub>i</sub><sup>Bus</sup>) represents the time savings of taking the bus rather than cycling, D<sub>i</sub> shows the actual distance of path to cycle, S<sub>i</sub><sup>Suitability</sup> is the suitability score, S<sub>i</sub><sup>Steepness</sup> is the steepness score, <var>w</var> is the weight associated with the corresponding score.
 
