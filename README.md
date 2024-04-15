@@ -92,8 +92,8 @@ Data pre-processing is performed in the following files, to prepare the coordina
 * Tagging of importance by weights
 * The following formula shows the computation of the overall score of each subzone
 
-Final Score = Weighted Score \div log<sub>e</sub>Area(<sup>Subzone</sup>) \div log<sub>e</sub>Pop(<sup>Subzone</sup>)
-Weighted Score = w<sub>1</sub> · S<sup>Lanes</sup> + w<sub>2</sub> · S<sup>Parking</sup> + \sum_{c=1}^10 w<sub>c</sub> · S<sup>Choke</sup> \right
+Final Score = Weighted Score / log<sub>e</sub>Area(<sup>Subzone</sup>) / log<sub>e</sub>Pop(<sup>Subzone</sup>)
+Weighted Score = w<sub>1</sub> · S<sup>Lanes</sup> + w<sub>2</sub> · S<sup>Parking</sup> + \left( \sum_{c=1}^10 w<sub>c</sub> · S<sup>Choke</sup> \right)^2
 
 Where Area<sup>Subzone</sup> is the area of the subzone, Pop<sup>Subzone</sup> is the resident population in the subzone, S<sup>Lanes</sup> is the score calculated from the total length of cycling lanes, S<sup>Parking</sup> is the score calculated from the number of bicycle parking, S<sup>Choke</sup> is the score calculated from the number of choke points present and <var>c</var> denotes the type of choke point present, <var>w</var> is the weight associated with the corresponding score. All scores are calculated within subzones. 
 
