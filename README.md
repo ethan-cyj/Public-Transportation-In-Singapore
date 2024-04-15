@@ -36,7 +36,7 @@ In creating this index, we will utilise different infrastructural factors to com
 
 In the above figure, after users zoom into their subzone of interest, the textbox above the map will update, guiding users on the interpretation. A few conditions were used in the computation of this message.
 
-1. All four types of Scores(Cycling Lanes, Bicycle Parking, Choke Point, Overall) are considered good if they are better than the upper quartile. It is considered bad if it is worse than the lower quartile. Otherwise, it will be considered average.
+1. All four types of Scores (Cycling Lanes, Bicycle Parking, Choke Point, Overall) are considered good if they are better than the upper quartile. It is considered bad if it is worse than the lower quartile. Otherwise, it will be considered average.
 2. Since there are many subzones with no cycling paths at all, a Total Cycling Path Rank of 139 means that there are no cycling paths at all. Similarly, subzones with a Choke Point Ranking of 1 means that there are no choke points present.
 
 ### **Sub-Problem 2 (SP2)**: Last-Mile Connectivity Assessment.
@@ -86,22 +86,39 @@ Data pre-processing is performed in the following files, to prepare the coordina
 
 #### SP1
 
-* explain how index is computed
+* Explain how index is computed
+
+<u>Generation of Final Score</u>
+* Tagging of importance by weights
+* The following formula shows the computation of the overall score of each subzone
+![alt text](image/README/image.png)
+![alt text](image/README/image-1.png)
+
+Where Area<sup>Subzone</sup> is the area of the subzone, Pop<sup>Subzone</sup> is the resident population in the subzone, S<sup>Lanes</sup> is the score calculated from the total length of cycling lanes, S<sup>Parking</sup> is the score calculated from the number of bicycle parking, S<sup>Choke</sup> is the score calculated from the number of choke points present and <var>c</var> denotes the type of choke point present, <var>w</var> is the weight associated with the corresponding score. All scores are calculated within subzones. 
+
+For our project, we decided to fix the weights for each factor in order to form an objective comparison, where w<sub>Lanes</sub> = 4, w<sub>Parking</sub> = 3, while w<sub>c</sub> = -0.5 if the chokepoint has bicycle-friendly cycling features, and w<sub>c</sub> = -1 if it does not. In future works, we intend to leave the setting of these weights for users to input so as to cater to their personal preferences.
+
+Next, the normalisation by the population size and area of the subzone was done to consider the inconvenience of cycling in areas with more people, and larger subzones where cycling paths tend to be more sparse. 
 
 #### SP2
 
 Pairing of MRT and Residential Clusters
 
-* uses OneMap, ORS and OTP APIs to get data required for SP2 visualisation
+* Uses OneMap, ORS and OTP APIs to get data required for SP2 visualisation
 * Data cleaning performed
 * Pairing is performed for both n(5) pairing method and individual pairing method.
-* explain two pairing methods
-* explain routing API function here
+* Explain two pairing methods
+* Explain routing API function here
 
 MRT Rankings
 
 * Here we formulated our SP2 weighted score function
-* explain weighted score here (take from journal)
+<u>Computation of Final Score</u>
+![alt text](image/README/image-3.png)
+
+Where T<sub>i</sub><sup>Cycling</sup> is the time taken by cycling, T<sub>i</sub><sup>Bus</sup> is the time taken by public transport (bus and walking), (T<sub>i</sub><sup>Cycling</sup> - T<sub>i</sub><sup>Bus</sup>) represents the time savings of taking the bus rather than cycling, D<sub>i</sub> shows the actual distance of path to cycle, S<sub>i</sub><sup>Suitability</sup> is the suitability score, S<sub>i</sub><sup>Steepness</sup> is the steepness score, <var>w</var> is the weight associated with the corresponding score.
+
+Without transforming the data, taking the absolute value would result in the component time savings dominating the score regardless of its assigned weights due to its large range. Each component of the weighted score is thus standardized to standard normal, before passing to the weighted score function. Standardizing the components to a standard normal distribution helps to equalize the impact of each component on the final score calculation. This ensures that each component contributes proportionally to the final score based on its weight, rather than its scale or range. The score is then normalized to the final score to take a range between 0-100. This ensures that the score is easily interpretable and comparable across different scenarios.
 
 #### SP3
 
