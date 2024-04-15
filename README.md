@@ -94,7 +94,7 @@ Data pre-processing is performed in the following files, to prepare the coordina
 
 Final Score = Weighted Score / log<sub>e</sub>Area<sup>Subzone</sup> / log<sub>e</sub>Pop<sup>Subzone</sup>
 
-Weighted Score = w<sub>1</sub> · S<sup>Lanes</sup> + w<sub>2</sub> · S<sup>Parking</sup> + \sum\limits_{c=0}^10 w<sub>c</sub> · S<sup>Choke</sup>
+Weighted Score = w<sub>1</sub> · S<sup>Lanes</sup> + w<sub>2</sub> · S<sup>Parking</sup> + \sum_{c=0}^{10} w<sub>c</sub> · S<sup>Choke</sup>
 
 Where Area<sup>Subzone</sup> is the area of the subzone, Pop<sup>Subzone</sup> is the resident population in the subzone, S<sup>Lanes</sup> is the score calculated from the total length of cycling lanes, S<sup>Parking</sup> is the score calculated from the number of bicycle parking, S<sup>Choke</sup> is the score calculated from the number of choke points present and <var>c</var> denotes the type of choke point present, <var>w</var> is the weight associated with the corresponding score. All scores are calculated within subzones. 
 
