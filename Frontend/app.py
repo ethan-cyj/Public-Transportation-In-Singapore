@@ -34,7 +34,7 @@ load_dotenv()
 # api_key = api_key.json()["access_token"]
 # print(api_key)
 api_key = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI0NmJkYTI0NmI1NmM4ZDY5YWMyYzEyNmI2ZjEyOGU0MyIsImlzcyI6Imh0dHA6Ly9pbnRlcm5hbC1hbGItb20tcHJkZXppdC1pdC0xMjIzNjk4OTkyLmFwLXNvdXRoZWFzdC0xLmVsYi5hbWF6b25hd3MuY29tL2FwaS92Mi91c2VyL3Nlc3Npb24iLCJpYXQiOjE3MTI0Njk0MDQsImV4cCI6MTcxMjcyODYwNCwibmJmIjoxNzEyNDY5NDA0LCJqdGkiOiJRTWdrc3M2ZUlXNUd0OVFZIiwidXNlcl9pZCI6MjkxNCwiZm9yZXZlciI6ZmFsc2V9.GAjjMnx10GYzfZ2H4UWUQTZVYRAfO61Bet_eznqL7zI"
-current_directory = os.getcwd()
+current_directory = os.getcwd() # Assume that current directory is in Public-Transportation-In-Singapore
 data_directory = os.path.join(current_directory, 'data')
 www_dir = os.path.join(current_directory, 'Frontend','www')
 
